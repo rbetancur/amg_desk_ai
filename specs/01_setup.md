@@ -116,3 +116,37 @@ En app/db/base.py:
 - Crear AsyncSessionLocal para sesiones de DB asíncronas
 - Crear Base declarativa para futuros modelos
 - Función get_db() async para dependency injection en FastAPI
+
+## PASO 7: Crear archivo .env.example
+
+Crea el archivo `.env.example` en la raíz del directorio backend:
+
+- Documentar todas las variables de entorno requeridas
+- Incluir `DATABASE_URL` como variable obligatoria con formato y ejemplo
+- Incluir `PROJECT_NAME` y `VERSION` como variables opcionales (comentadas) con sus valores por defecto
+- Agregar comentarios descriptivos para cada variable
+- Indicar claramente qué variables son requeridas y cuáles opcionales
+
+**Estructura del archivo:**
+
+```env
+# Database Configuration
+# PostgreSQL connection string (Supabase)
+# Format: postgresql://user:password@host:port/database
+# Required: Yes
+DATABASE_URL=postgresql://user:password@localhost:5432/database
+
+# Application Configuration
+# Project name (optional, default: "AGM Desk AI Backend")
+# PROJECT_NAME=AGM Desk AI Backend
+
+# Application version (optional, default: "0.1.0")
+# VERSION=0.1.0
+```
+
+**Notas importantes:**
+
+- Este archivo debe ser commiteado al repositorio (a diferencia de `.env` que está en `.gitignore`)
+- Los valores deben ser ejemplos claros, nunca credenciales reales
+- Facilita la configuración para nuevos desarrolladores
+- Cumple con la estructura especificada en el README principal
