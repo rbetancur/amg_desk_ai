@@ -99,14 +99,30 @@ backend/
 │   │   ├── service_desk.py        # Rutas CRUD para solicitudes
 │   │   ├── app_amerika.py         # Rutas de acción: /api/apps/amerika/...
 │   │   └── app_domain.py          # Rutas de acción: /api/apps/domain/...
-│   ├── models/                    # Modelos Pydantic para Entradas/Salidas
+│   ├── models/                    # Modelos SQLAlchemy y Pydantic
 │   │   ├── __init__.py
-│   │   └── schemas.py
+│   │   ├── entities.py            # Modelos SQLAlchemy (Category, Request)
+│   │   └── schemas.py             # Esquemas Pydantic para validación
 │   └── services/                  # Lógica de negocio e interacción con Supabase
 │       ├── __init__.py
 │       ├── supabase_service.py    # Lógica de conexión a Supabase
 │       └── auth_service.py        # Lógica para validar JWT de Supabase
+├── alembic/                       # Migraciones de base de datos
+│   ├── versions/                  # Archivos de migración
+│   │   └── 001_initial_migration.py
+│   ├── env.py                     # Configuración de Alembic
+│   └── script.py.mako             # Template para migraciones
+├── scripts/                       # Scripts de utilidad
+│   ├── setup-db.sh                # Configurar base de datos (local o Supabase)
+│   ├── check-db.sh                # Verificar conexión y estado de BD
+│   ├── run-migrations.sh          # Ejecutar migraciones de Alembic
+│   └── verify-tables.py           # Verificar tablas creadas (Python)
+├── docs/                          # Documentación
+│   ├── DATABASE_SETUP.md          # Guía completa de configuración de BD
+│   └── VERIFY_MIGRATIONS.md       # Guía para verificar migraciones
 ├── pyproject.toml                 # Dependencias y configuración del proyecto
+├── docker-compose.yml              # Configuración de PostgreSQL local
+├── alembic.ini                     # Configuración de Alembic
 ├── .env.example                   # Ejemplo de variables de entorno
 └── .gitignore                     # Archivos a ignorar en git
 ```
@@ -289,6 +305,38 @@ ai_classification_data (JSONB) - Datos opcionales de auditoría de la IA.
 ## Estado del proyecto
 
 En desarrollo - El sistema está siendo diseñado para automatizar completamente el flujo descrito en el documento de flujo actual.
+
+## Scripts de Utilidad
+
+El backend incluye varios scripts de utilidad para facilitar el desarrollo y la configuración:
+
+### Scripts de Base de Datos
+
+- **`scripts/setup-db.sh`**: Configura la base de datos (PostgreSQL local o Supabase)
+  - Uso: `./scripts/setup-db.sh [local|supabase]`
+  - Automatiza la configuración e instalación de dependencias
+
+- **`scripts/check-db.sh`**: Verifica la conexión y estado de la base de datos
+  - Uso: `./scripts/check-db.sh`
+  - Detecta automáticamente si estás usando PostgreSQL local o Supabase
+
+- **`scripts/run-migrations.sh`**: Ejecuta las migraciones de Alembic
+  - Uso: `./scripts/run-migrations.sh`
+  - Instala dependencias automáticamente si es necesario
+
+- **`scripts/verify-tables.py`**: Script Python para verificar que las tablas se crearon correctamente
+  - Uso: `python scripts/verify-tables.py`
+
+### Documentación
+
+- **`docs/DATABASE_SETUP.md`**: Guía completa de configuración de base de datos
+  - Instrucciones para PostgreSQL local y Supabase
+  - Configuración de Realtime y RLS
+  - Troubleshooting
+
+- **`docs/VERIFY_MIGRATIONS.md`**: Guía rápida para verificar migraciones
+  - Múltiples métodos de verificación
+  - Soluciones rápidas a problemas comunes
 
 ## Notas importantes
 
