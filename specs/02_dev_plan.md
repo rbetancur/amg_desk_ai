@@ -72,6 +72,8 @@ Tareas Específicas:
    - `HLP_CATEGORIAS` → `categories` en modelos de código
    - Los ORMs (SQLAlchemy para Python, TypeORM para TypeScript) deben configurarse con mapeo explícito de nombres de tabla
 
+   **Documentación completa**: Ver [docs/NAMING_MAPPING.md](../docs/NAMING_MAPPING.md) para el mapeo detallado de tablas, campos, estados y convenciones.
+
 ## PASO 2. Backend Unificado (FastAPI) (Equipo Backend)
 
 "Desarrollar el Backend Unificado usando FastAPI. Este servicio debe validar la autenticación de Supabase y exponer los endpoints de acción que serán consumidos por el Agente AI."
