@@ -1,8 +1,8 @@
 # Guía de Setup del Proyecto FastAPI
 
-Esta guía te ayudará a crear el proyecto FastAPI básico para AMG Desk AI paso a paso.
+Esta guía te ayudará a crear el proyecto FastAPI básico para AGM Desk AI paso a paso.
 
-**Referencia**: Para ver la estructura completa del backend, consulta la sección [Estructura del Backend Unificado](../docs/README.md#estructura-del-backend-unificado-amg-simulated-enviromentbackend) en el README principal.
+**Referencia**: Para ver la estructura completa del backend, consulta la sección [Estructura del Backend Unificado](../docs/README.md#estructura-del-backend-unificado-agm-simulated-enviromentbackend) en el README principal.
 
 ## Objetivo
 
@@ -18,21 +18,21 @@ Crea las estructuras de carpetas para los tres componentes principales del proye
 
 ### Backend FastAPI
 
-Crea la estructura de carpetas del backend FastAPI según la estructura definida en el [README](../docs/README.md#estructura-del-backend-unificado-amg-simulated-enviromentbackend).
+Crea la estructura de carpetas del backend FastAPI según la estructura definida en el [README](../docs/README.md#estructura-del-backend-unificado-agm-simulated-enviromentbackend).
 
-**Referencia completa**: [Estructura del Backend Unificado](../docs/README.md#estructura-del-backend-unificado-amg-simulated-enviromentbackend)
+**Referencia completa**: [Estructura del Backend Unificado](../docs/README.md#estructura-del-backend-unificado-agm-simulated-enviromentbackend)
 
 ### Frontend React
 
-Crea la estructura de carpetas del frontend React según la estructura definida en el [README](../docs/README.md#estructura-del-frontend-amg-simulated-enviromentfrontend).
+Crea la estructura de carpetas del frontend React según la estructura definida en el [README](../docs/README.md#estructura-del-frontend-agm-simulated-enviromentfrontend).
 
-**Referencia completa**: [Estructura del Frontend](../docs/README.md#estructura-del-frontend-amg-simulated-enviromentfrontend)
+**Referencia completa**: [Estructura del Frontend](../docs/README.md#estructura-del-frontend-agm-simulated-enviromentfrontend)
 
 ### Agente AI
 
-Crea la estructura de carpetas del agente AI según la estructura definida en el [README](../docs/README.md#estructura-del-agente-ai-amg-desk-ai).
+Crea la estructura de carpetas del agente AI según la estructura definida en el [README](../docs/README.md#estructura-del-agente-ai-agm-desk-ai).
 
-**Referencia completa**: [Estructura del Agente AI](../docs/README.md#estructura-del-agente-ai-amg-desk-ai)
+**Referencia completa**: [Estructura del Agente AI](../docs/README.md#estructura-del-agente-ai-agm-desk-ai)
 
 ## PASO 2: Configurar dependencias
 
@@ -40,9 +40,9 @@ Crea `pyproject.toml` con estas dependencias mínimas:
 
 ```toml
 [project]
-name = "amg-desk-ai-backend"
+name = "agm-desk-ai-backend"
 version = "0.1.0"
-description = "Backend FastAPI para AMG Desk AI"
+description = "Backend FastAPI para AGM Desk AI"
 requires-python = ">=3.11"
 dependencies = [
     "fastapi>=0.104.0",
@@ -116,3 +116,37 @@ En app/db/base.py:
 - Crear AsyncSessionLocal para sesiones de DB asíncronas
 - Crear Base declarativa para futuros modelos
 - Función get_db() async para dependency injection en FastAPI
+
+## PASO 7: Crear archivo .env.example
+
+Crea el archivo `.env.example` en la raíz del directorio backend:
+
+- Documentar todas las variables de entorno requeridas
+- Incluir `DATABASE_URL` como variable obligatoria con formato y ejemplo
+- Incluir `PROJECT_NAME` y `VERSION` como variables opcionales (comentadas) con sus valores por defecto
+- Agregar comentarios descriptivos para cada variable
+- Indicar claramente qué variables son requeridas y cuáles opcionales
+
+**Estructura del archivo:**
+
+```env
+# Database Configuration
+# PostgreSQL connection string (Supabase)
+# Format: postgresql://user:password@host:port/database
+# Required: Yes
+DATABASE_URL=postgresql://user:password@localhost:5432/database
+
+# Application Configuration
+# Project name (optional, default: "AGM Desk AI Backend")
+# PROJECT_NAME=AGM Desk AI Backend
+
+# Application version (optional, default: "0.1.0")
+# VERSION=0.1.0
+```
+
+**Notas importantes:**
+
+- Este archivo debe ser commiteado al repositorio (a diferencia de `.env` que está en `.gitignore`)
+- Los valores deben ser ejemplos claros, nunca credenciales reales
+- Facilita la configuración para nuevos desarrolladores
+- Cumple con la estructura especificada en el README principal

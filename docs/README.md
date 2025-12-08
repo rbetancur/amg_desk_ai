@@ -1,10 +1,10 @@
-# AMG Desk AI
+# AGM Desk AI
 
 Sistema automatizado de atención a mesas de servicio para gestión de accesos corporativos.
 
 ## Descripción
 
-AMG Desk AI es una solución de automatización diseñada para optimizar y agilizar el proceso de atención de solicitudes relacionadas con cuentas de acceso corporativas. El sistema automatiza el flujo completo que actualmente requiere intervención manual de una auxiliar, desde la interpretación de la solicitud hasta la ejecución de acciones técnicas y la comunicación con el funcionario.
+AGM Desk AI es una solución de automatización diseñada para optimizar y agilizar el proceso de atención de solicitudes relacionadas con cuentas de acceso corporativas. El sistema automatiza el flujo completo que actualmente requiere intervención manual de una auxiliar, desde la interpretación de la solicitud hasta la ejecución de acciones técnicas y la comunicación con el funcionario.
 
 ## Problema que resuelve
 
@@ -79,11 +79,11 @@ El proyecto está organizado en tres componentes principales:
 
 3. **Agente AI**: Servicio consumidor y orquestador independiente que procesa solicitudes en tiempo real mediante Supabase Realtime. Utiliza `pyproject.toml` para gestión de dependencias y está estructurado con separación modular (core, services).
 
-### Estructura del Backend Unificado (amg-simulated-enviroment/backend/)
+### Estructura del Backend Unificado (agm-simulated-enviroment/backend/)
 
 Aquí reside el FastAPI Monolítico Modular, que maneja tanto la Mesa de Servicio como los endpoints simulados de América y Dominio.
 
-```amg-simulated-enviroment/
+```agm-simulated-enviroment/
 backend/
 ├── app/
 │   ├── __init__.py
@@ -111,11 +111,11 @@ backend/
 └── .gitignore                     # Archivos a ignorar en git
 ```
 
-### Estructura del Frontend (amg-simulated-enviroment/frontend/)
+### Estructura del Frontend (agm-simulated-enviroment/frontend/)
 
 Esta estructura sigue los principios de modularidad y custom hooks para facilitar la migración.
 
-```amg-simulated-enviroment/frontend/
+```agm-simulated-enviroment/frontend/
 ├── src/
 │   ├── api_services/        # Capa de Abstracción de APIs (crucial para migración)
 │   │   ├── supabase_client.ts
@@ -186,11 +186,11 @@ Esta estructura sigue los principios de modularidad y custom hooks para facilita
    - `Dashboard.tsx`
    - `LoginPage.tsx`
 
-### Estructura del Agente AI (amg-desk-ai/)
+### Estructura del Agente AI (agm-desk-ai/)
 
 Este es el servicio consumidor y orquestador que se ejecuta de forma independiente.
 
-```amg-desk-ai/
+```agm-desk-ai/
 ├── agent/
 │   ├── __init__.py
 │   ├── main.py                    # Lógica principal del "Listener"
@@ -259,7 +259,7 @@ Las tablas de base de datos mantendrán los nombres legacy en español (ej: `HLP
 -FECCIERRE (DATE, NOT NULL, DESCRIPCION: FECHA Y HORA EN QUE SE CERRO LA SOLICITUD)
 -CODMOTCIERRE (NUMBER(5), NULL, DESCRIPCION:ESTABLECE UN MOTIVO DE CIERRE, DEFECTO:  5-Respuesta Final)
 
-request_id (UUID / SERIAL BIGINT) 
+request_id (UUID / SERIAL BIGINT)
 user_id (UUID) - Clave Foránea (FK) al Usuario que creó la solicitud.
 created_at (TIMESTAMPZ) - Fecha y hora de creación.
 app_type (TEXT / ENUM) - Clasificación: 'América' o 'Dominio'.
