@@ -1,8 +1,8 @@
 # Guía de Setup del Proyecto FastAPI
 
-Esta guía te ayudará a crear el proyecto FastAPI básico para AMG Desk AI paso a paso.
+Esta guía te ayudará a crear el proyecto FastAPI básico para AGM Desk AI paso a paso.
 
-**Referencia**: Para ver la estructura completa del backend, consulta la sección [Estructura del Backend Unificado](../docs/README.md#estructura-del-backend-unificado-amg-simulated-enviromentbackend) en el README principal.
+**Referencia**: Para ver la estructura completa del backend, consulta la sección [Estructura del Backend Unificado](../docs/README.md#estructura-del-backend-unificado-agm-simulated-enviromentbackend) en el README principal.
 
 ## Objetivo
 
@@ -18,21 +18,21 @@ Crea las estructuras de carpetas para los tres componentes principales del proye
 
 ### Backend FastAPI
 
-Crea la estructura de carpetas del backend FastAPI según la estructura definida en el [README](../docs/README.md#estructura-del-backend-unificado-amg-simulated-enviromentbackend).
+Crea la estructura de carpetas del backend FastAPI según la estructura definida en el [README](../docs/README.md#estructura-del-backend-unificado-agm-simulated-enviromentbackend).
 
-**Referencia completa**: [Estructura del Backend Unificado](../docs/README.md#estructura-del-backend-unificado-amg-simulated-enviromentbackend)
+**Referencia completa**: [Estructura del Backend Unificado](../docs/README.md#estructura-del-backend-unificado-agm-simulated-enviromentbackend)
 
 ### Frontend React
 
-Crea la estructura de carpetas del frontend React según la estructura definida en el [README](../docs/README.md#estructura-del-frontend-amg-simulated-enviromentfrontend).
+Crea la estructura de carpetas del frontend React según la estructura definida en el [README](../docs/README.md#estructura-del-frontend-agm-simulated-enviromentfrontend).
 
-**Referencia completa**: [Estructura del Frontend](../docs/README.md#estructura-del-frontend-amg-simulated-enviromentfrontend)
+**Referencia completa**: [Estructura del Frontend](../docs/README.md#estructura-del-frontend-agm-simulated-enviromentfrontend)
 
 ### Agente AI
 
-Crea la estructura de carpetas del agente AI según la estructura definida en el [README](../docs/README.md#estructura-del-agente-ai-amg-desk-ai).
+Crea la estructura de carpetas del agente AI según la estructura definida en el [README](../docs/README.md#estructura-del-agente-ai-agm-desk-ai).
 
-**Referencia completa**: [Estructura del Agente AI](../docs/README.md#estructura-del-agente-ai-amg-desk-ai)
+**Referencia completa**: [Estructura del Agente AI](../docs/README.md#estructura-del-agente-ai-agm-desk-ai)
 
 ## PASO 2: Configurar dependencias
 
@@ -40,9 +40,9 @@ Crea `pyproject.toml` con estas dependencias mínimas:
 
 ```toml
 [project]
-name = "amg-desk-ai-backend"
+name = "agm-desk-ai-backend"
 version = "0.1.0"
-description = "Backend FastAPI para AMG Desk AI"
+description = "Backend FastAPI para AGM Desk AI"
 requires-python = ">=3.11"
 dependencies = [
     "fastapi>=0.104.0",
