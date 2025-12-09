@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale/es'
-import { Clock, CheckCircle, AlertCircle, ChevronLeft, ChevronRight, Brain } from 'lucide-react'
+import { Clock, CheckCircle, AlertCircle, ChevronLeft, ChevronRight, Brain, Eye } from 'lucide-react'
 import { useFetchRequests } from '../../hooks/useFetchRequests'
-import { getEstadoText } from '../../lib/constants'
+import { getEstadoText, getCategoryName } from '../../lib/constants'
 import type { Request, AIClassificationData } from '../../lib/types'
+import { RequestDetailModal } from './RequestDetailModal'
 
 function EstadoBadge({ codestado }: { codestado: number | null }) {
   const estado = codestado ?? 1
@@ -68,8 +69,20 @@ function AIClassificationBadge({ data }: { data: AIClassificationData }) {
 
 export function RequestTable() {
   const [currentOffset, setCurrentOffset] = useState(0)
+  const [selectedRequest, setSelectedRequest] = useState<Request | null>(null)
+  const [isModalOpen, setIsModalOpen] = useState(false)
   const limit = 50
   const { requests, loading, error, pagination } = useFetchRequests(limit, currentOffset)
+
+  const handleViewDetails = (request: Request) => {
+    setSelectedRequest(request)
+    setIsModalOpen(true)
+  }
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false)
+    setSelectedRequest(null)
+  }
 
   const handlePrevious = () => {
     if (currentOffset > 0) {
@@ -147,6 +160,9 @@ export function RequestTable() {
                 Estado
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-slate-700 uppercase tracking-wider">
+                Categoría
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-slate-700 uppercase tracking-wider">
                 Descripción
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-slate-700 uppercase tracking-wider">
@@ -161,6 +177,9 @@ export function RequestTable() {
               <th className="px-6 py-3 text-left text-xs font-medium text-slate-700 uppercase tracking-wider">
                 Clasificación IA
               </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-slate-700 uppercase tracking-wider">
+                Acciones
+              </th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-slate-200">
@@ -168,6 +187,11 @@ export function RequestTable() {
               <tr key={request.codpeticiones ?? `request-${index}`} className="hover:bg-slate-50">
                 <td className="px-6 py-4 whitespace-nowrap">
                   <EstadoBadge codestado={request.codestado} />
+                </td>
+                <td className="px-6 py-4">
+                  <div className="text-sm text-slate-900 max-w-xs">
+                    {getCategoryName(request.codcategoria)}
+                  </div>
                 </td>
                 <td className="px-6 py-4">
                   <div className="text-sm text-slate-900 max-w-md">{request.description}</div>
@@ -194,6 +218,17 @@ export function RequestTable() {
                     <span className="text-xs text-slate-400 italic">-</span>
                   )}
                 </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <button
+                    onClick={() => handleViewDetails(request)}
+                    className="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-50 hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 transition-colors"
+                    aria-label={`Ver detalles de solicitud #${request.codpeticiones}`}
+                    title="Ver detalles"
+                  >
+                    <Eye className="w-4 h-4" />
+                    <span className="hidden sm:inline">Ver</span>
+                  </button>
+                </td>
               </tr>
             ))}
           </tbody>
@@ -206,6 +241,18 @@ export function RequestTable() {
           <div key={request.codpeticiones ?? `request-${index}`} className="p-4">
             <div className="flex items-start justify-between mb-2">
               <EstadoBadge codestado={request.codestado} />
+              <button
+                onClick={() => handleViewDetails(request)}
+                className="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-50 hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 transition-colors"
+                aria-label={`Ver detalles de solicitud #${request.codpeticiones}`}
+              >
+                <Eye className="w-4 h-4" />
+                <span>Ver</span>
+              </button>
+            </div>
+            <div className="mb-2">
+              <p className="text-sm font-medium text-slate-900 mb-1">Categoría</p>
+              <p className="text-sm text-slate-600">{getCategoryName(request.codcategoria)}</p>
             </div>
             <div className="mb-2">
               <p className="text-sm font-medium text-slate-900 mb-1">Descripción</p>
@@ -258,6 +305,13 @@ export function RequestTable() {
           </button>
         </div>
       )}
+
+      {/* Modal de Detalles */}
+      <RequestDetailModal
+        request={selectedRequest}
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+      />
     </div>
   )
 }
