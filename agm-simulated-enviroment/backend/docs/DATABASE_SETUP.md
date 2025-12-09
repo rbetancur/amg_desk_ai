@@ -205,9 +205,41 @@ RLS asegura que los usuarios solo puedan ver y editar sus propias solicitudes.
 3. Haz clic en el ícono de candado (🔒) junto al nombre de la tabla
 4. Activa **Enable Row Level Security**
 
+##### Crear Función SQL Helper
+
+**IMPORTANTE**: Para la PoC, `USUSOLICITA` contiene el username extraído del email del usuario (parte antes de `@`), no el UUID. Por ejemplo: `mzuloaga@aguasdemanizales.com.co` → `USUSOLICITA = "mzuloaga"`.
+
+Primero, crea una función SQL helper que extraiga el username del email del usuario autenticado:
+
+1. Ve a **SQL Editor** en el Dashboard de Supabase
+2. Ejecuta el siguiente SQL:
+
+```sql
+CREATE OR REPLACE FUNCTION get_username_from_auth_user()
+RETURNS TEXT AS $$
+  SELECT SUBSTRING(
+    (SELECT email FROM auth.users WHERE id = auth.uid()) 
+    FROM '^([^@]+)'
+  );
+$$ LANGUAGE SQL STABLE SECURITY DEFINER;
+```
+
+**Explicación**:
+- `SECURITY DEFINER`: Permite que la función acceda a `auth.users` incluso cuando es llamada desde políticas RLS
+- `STABLE`: Indica que la función retorna el mismo resultado para la misma entrada dentro de una transacción
+- La función extrae la parte antes de `@` del email del usuario autenticado
+
+**Verificar que la función se creó correctamente**:
+```sql
+-- Probar la función (debe ejecutarse como usuario autenticado)
+SELECT get_username_from_auth_user();
+```
+
 ##### Crear Políticas RLS
 
 Ve a **Authentication** > **Policies** y crea las siguientes políticas:
+
+**⚠️ Si ya tienes políticas RLS creadas con el formato antiguo** (`auth.uid()::text = USUSOLICITA`), elimínalas primero desde el Dashboard antes de crear las nuevas.
 
 **Política 1: Usuarios pueden ver sus propias solicitudes**
 
@@ -218,11 +250,9 @@ Ve a **Authentication** > **Policies** y crea las siguientes políticas:
 
 ```sql
 (
-  (SELECT auth.uid()::text) = "USUSOLICITA"
+  get_username_from_auth_user() = "USUSOLICITA"
 )
 ```
-
-**Nota**: Esta política asume que `USUSOLICITA` contiene el UUID del usuario de Supabase. Si usas un mapeo diferente (ej: email), ajusta la expresión.
 
 **Política 2: Usuarios pueden crear solicitudes**
 
@@ -233,7 +263,7 @@ Ve a **Authentication** > **Policies** y crea las siguientes políticas:
 
 ```sql
 (
-  (SELECT auth.uid()::text) = "USUSOLICITA"
+  get_username_from_auth_user() = "USUSOLICITA"
 )
 ```
 
@@ -246,11 +276,144 @@ Ve a **Authentication** > **Policies** y crea las siguientes políticas:
 
 ```sql
 (
-  (SELECT auth.uid()::text) = "USUSOLICITA"
+  get_username_from_auth_user() = "USUSOLICITA"
 )
 ```
 
-**Nota sobre Service Role Key**: El `SUPABASE_SERVICE_ROLE_KEY` permite bypass automático de RLS. El Agente AI usará esta clave para leer y actualizar todas las solicitudes sin restricciones.
+**Notas importantes**:
+- **Mapeo de USUSOLICITA**: `USUSOLICITA` contiene el username extraído del email (ej: `mzuloaga` de `mzuloaga@aguasdemanizales.com.co`). El backend extrae automáticamente este valor del JWT del usuario autenticado.
+- **Validación de longitud**: El campo `USUSOLICITA` es `VARCHAR(25)`. El backend debe validar que el username no exceda 25 caracteres antes de insertar.
+- **Service Role Key**: El `SUPABASE_SERVICE_ROLE_KEY` permite bypass automático de RLS. El Agente AI usará esta clave para leer y actualizar todas las solicitudes sin restricciones.
+- **Rendimiento**: Las políticas RLS consultan `auth.users` en cada operación. Este overhead es aceptable para la PoC, pero puede optimizarse en producción usando metadata del usuario.
+
+##### Alternativa: Usar Script SQL Completo
+
+Puedes usar el script SQL completo que incluye la función y todas las políticas. Ver sección [Script SQL para Configurar RLS](#script-sql-para-configurar-rls) más abajo.
+
+#### 7.1. Paso a Paso para Actualizar Políticas RLS Existentes
+
+Si ya tienes políticas RLS configuradas con el formato antiguo (usando `auth.uid()::text`), sigue estos pasos para actualizarlas:
+
+**Paso 1: Crear la función SQL helper**
+
+1. Ve a **SQL Editor** en el Dashboard de Supabase
+2. Ejecuta el siguiente SQL:
+
+```sql
+CREATE OR REPLACE FUNCTION get_username_from_auth_user()
+RETURNS TEXT AS $$
+  SELECT SUBSTRING(
+    (SELECT email FROM auth.users WHERE id = auth.uid()) 
+    FROM '^([^@]+)'
+  );
+$$ LANGUAGE SQL STABLE SECURITY DEFINER;
+```
+
+3. Verifica que la función se creó correctamente ejecutando:
+```sql
+SELECT get_username_from_auth_user();
+```
+
+**Paso 2: Eliminar políticas RLS antiguas**
+
+1. Ve a **Authentication** > **Policies** en el Dashboard
+2. Busca las políticas para la tabla `HLP_PETICIONES`:
+   - `Users can view own requests` (SELECT)
+   - `Users can create requests` (INSERT)
+   - `Users can update own requests` (UPDATE) - si existe
+3. Elimina cada política haciendo clic en el ícono de eliminar (🗑️)
+
+**Paso 3: Crear nuevas políticas RLS**
+
+Sigue las instrucciones en la sección [Crear Políticas RLS](#crear-políticas-rls) más arriba, o usa el script SQL completo de la sección siguiente.
+
+**Paso 4: Verificar las políticas**
+
+1. En **Authentication** > **Policies**, verifica que las nuevas políticas estén creadas
+2. Verifica que usen `get_username_from_auth_user() = "USUSOLICITA"` en lugar de `auth.uid()::text = "USUSOLICITA"`
+
+#### 7.2. Script SQL para Configurar RLS
+
+Puedes ejecutar este script SQL completo en el **SQL Editor** de Supabase para configurar todo de una vez:
+
+```sql
+-- ============================================
+-- Script: Configurar RLS para USUSOLICITA (Username extraído del email)
+-- ============================================
+-- Este script crea la función helper y las políticas RLS necesarias
+-- para que los usuarios solo puedan acceder a sus propias solicitudes
+-- basándose en el username extraído de su email.
+--
+-- IMPORTANTE: Ejecuta este script DESPUÉS de crear las tablas con las migraciones
+-- ============================================
+
+-- Paso 1: Crear función helper para extraer username del email
+CREATE OR REPLACE FUNCTION get_username_from_auth_user()
+RETURNS TEXT AS $$
+  SELECT SUBSTRING(
+    (SELECT email FROM auth.users WHERE id = auth.uid()) 
+    FROM '^([^@]+)'
+  );
+$$ LANGUAGE SQL STABLE SECURITY DEFINER;
+
+-- Paso 2: Eliminar políticas antiguas si existen (opcional, comentar si no las tienes)
+-- Descomenta las siguientes líneas si necesitas eliminar políticas antiguas:
+-- DROP POLICY IF EXISTS "Users can view own requests" ON "HLP_PETICIONES";
+-- DROP POLICY IF EXISTS "Users can create requests" ON "HLP_PETICIONES";
+-- DROP POLICY IF EXISTS "Users can update own requests" ON "HLP_PETICIONES";
+
+-- Paso 3: Crear política para SELECT (ver solicitudes)
+CREATE POLICY "Users can view own requests"
+ON "HLP_PETICIONES"
+FOR SELECT
+USING (
+  get_username_from_auth_user() = "USUSOLICITA"
+);
+
+-- Paso 4: Crear política para INSERT (crear solicitudes)
+CREATE POLICY "Users can create requests"
+ON "HLP_PETICIONES"
+FOR INSERT
+WITH CHECK (
+  get_username_from_auth_user() = "USUSOLICITA"
+);
+
+-- Paso 5: Crear política para UPDATE (actualizar solicitudes)
+CREATE POLICY "Users can update own requests"
+ON "HLP_PETICIONES"
+FOR UPDATE
+USING (
+  get_username_from_auth_user() = "USUSOLICITA"
+)
+WITH CHECK (
+  get_username_from_auth_user() = "USUSOLICITA"
+);
+
+-- Verificar que todo se creó correctamente
+SELECT 
+  schemaname,
+  tablename,
+  policyname,
+  permissive,
+  roles,
+  cmd,
+  qual
+FROM pg_policies
+WHERE tablename = 'HLP_PETICIONES'
+ORDER BY policyname;
+```
+
+**Instrucciones de uso**:
+
+1. Copia el script completo
+2. Ve a **SQL Editor** en el Dashboard de Supabase
+3. Pega el script en el editor
+4. Si ya tienes políticas antiguas, descomenta las líneas del Paso 2 antes de ejecutar
+5. Ejecuta el script (Run o F5)
+6. Verifica que no haya errores
+7. Verifica que las políticas se crearon correctamente ejecutando la consulta de verificación al final
+
+**Nota**: Este script también está disponible en `agm-simulated-enviroment/backend/scripts/setup-rls-username.sql`
 
 #### 8. Configurar Autenticación
 
@@ -355,6 +518,53 @@ alembic current
 # Verificar tablas
 # En Supabase Dashboard > Database > Tables
 ```
+
+#### 9.1. Validar Políticas RLS
+
+Después de configurar las políticas RLS, valida que funcionen correctamente:
+
+**Opción 1: Usar script de prueba SQL**
+
+1. Ve a **SQL Editor** en el Dashboard de Supabase
+2. Abre el archivo `agm-simulated-enviroment/backend/scripts/test-rls-username.sql`
+3. Ejecuta las pruebas 1-5 (no requieren autenticación):
+   - Verificar que la función existe
+   - Verificar estructura de la función
+   - Verificar que las políticas existen
+   - Verificar contenido de las políticas
+   - Verificar que RLS está habilitado
+
+**Opción 2: Validación manual**
+
+Ejecuta estas consultas en el **SQL Editor**:
+
+```sql
+-- Verificar función
+SELECT routine_name, routine_type 
+FROM information_schema.routines
+WHERE routine_name = 'get_username_from_auth_user';
+
+-- Verificar políticas
+SELECT policyname, cmd as operation
+FROM pg_policies
+WHERE tablename = 'HLP_PETICIONES';
+
+-- Verificar RLS habilitado
+SELECT tablename, rowsecurity as rls_enabled
+FROM pg_tables
+WHERE tablename = 'HLP_PETICIONES';
+```
+
+**Pruebas con usuarios autenticados** (requieren frontend/backend):
+
+Las pruebas 6-9 del script `test-rls-username.sql` requieren usuarios autenticados y deben ejecutarse durante el desarrollo del frontend y backend:
+
+- **Prueba 6**: Verificar que la función retorna el username correcto del usuario autenticado
+- **Prueba 7**: Verificar que `SUPABASE_SERVICE_ROLE_KEY` bypass RLS
+- **Prueba 8**: Validar edge cases (emails largos, caracteres especiales, etc.)
+- **Prueba 9**: Validar que las políticas RLS funcionan correctamente (usuarios solo ven sus propias solicitudes)
+
+Ver el archivo `agm-simulated-enviroment/backend/scripts/test-rls-username.sql` para detalles completos de las pruebas.
 
 ### Usando el Script de Configuración
 
@@ -598,7 +808,7 @@ pip install alembic
 - 🔒 **Mantén `SUPABASE_SERVICE_ROLE_KEY` segura**, permite bypass de RLS
 - 📝 **Documenta cambios** en las políticas RLS y configuración de Realtime
 - 🔄 **Realtime solo funciona en Supabase**, no en PostgreSQL local
-- 🗺️ **Mapeo de usuarios**: Asegúrate de que `USUSOLICITA` coincida con el formato esperado (UUID de Supabase o email según tu implementación)
+- 🗺️ **Mapeo de usuarios**: `USUSOLICITA` contiene el username extraído del email del usuario (parte antes de `@`). Ejemplo: `mzuloaga@aguasdemanizales.com.co` → `USUSOLICITA = "mzuloaga"`. El backend extrae automáticamente este valor del JWT del usuario autenticado.
 
 ---
 

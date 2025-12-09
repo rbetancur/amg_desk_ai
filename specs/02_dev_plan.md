@@ -41,7 +41,7 @@ Tareas Específicas:
 
    **Notas importantes**:
    - Se mantienen EXACTAMENTE los campos legacy definidos en el esquema existente
-   - `USUSOLICITA` debe obtenerse del usuario autenticado de Supabase (puede mapearse desde el email o metadata del usuario)
+   - `USUSOLICITA` debe obtenerse del usuario autenticado de Supabase: se extrae el username del email (parte antes de `@`). Ejemplo: `mzuloaga@aguasdemanizales.com.co` → `USUSOLICITA = "mzuloaga"`
    - `CODUSOLUCION` será 'AGENTE-MS' cuando el Agente AI resuelva automáticamente
    - `SOLUCION` contendrá la respuesta formal al usuario final (incluyendo contraseñas generadas si aplica)
    - `DESCRIPTION` contiene la descripción original del problema ingresada por el usuario
@@ -58,9 +58,11 @@ Tareas Específicas:
 5. **Habilitación de Realtime**: Habilitar la replicación (Realtime) para la tabla `HLP_PETICIONES` para capturar eventos de INSERT. Esto permitirá que el Agente AI detecte nuevas solicitudes en tiempo real.
 
 6. **Políticas de Seguridad (RLS)**: Implementar políticas de Row Level Security:
-   - En `HLP_PETICIONES`: Los usuarios solo pueden ver/editar las solicitudes donde `USUSOLICITA` coincide con su código de usuario (obtenido de `auth.users` metadata o email)
+   - En `HLP_PETICIONES`: Los usuarios solo pueden ver/editar las solicitudes donde `USUSOLICITA` coincide con su username extraído del email (parte antes de `@`, ej: `mzuloaga` de `mzuloaga@aguasdemanizales.com.co`)
+   - Las políticas RLS usan la función `get_username_from_auth_user()` que extrae el username del email del usuario autenticado
    - El Agente AI (usando service_role_key) debe tener acceso completo para leer y actualizar todas las solicitudes
    - Considerar políticas adicionales según los requisitos de auditoría y reportes
+   - Ver documentación detallada en `agm-simulated-enviroment/backend/docs/DATABASE_SETUP.md` sección 7
 
 7. **Claves de Acceso**: Generar y almacenar de forma segura la `service_role_key` de Supabase para el uso exclusivo del Agente AI. Esta clave permite al agente:
    - Leer todas las solicitudes (necesario para procesar nuevas solicitudes)
@@ -78,24 +80,19 @@ Tareas Específicas:
 
 "Desarrollar el Backend Unificado usando FastAPI. Este servicio debe validar la autenticación de Supabase y exponer los endpoints de acción que serán consumidos por el Agente AI."
 
-Tareas Específicas:
+**Nota**: Para la especificación técnica detallada de este paso, incluyendo todas las tareas específicas, arquitectura, endpoints, autenticación, validaciones y orden de implementación, consulta el documento:
 
-1. Estructura del Proyecto: Inicializar el proyecto FastAPI y configurar el entorno Python.
+👉 **[Especificación Detallada: Backend Unificado (FastAPI)](./03_backend_detailed.md)**
 
-2. Integración de Autenticación: Implementar la lógica para validar los JWTs emitidos por Supabase en las solicitudes a los endpoints críticos.
+El documento detallado incluye:
 
-3. Endpoint de Mesa de Servicio (Controlador CRUD): Implementar los endpoints básicos de la API para que el Frontend pueda insertar y consultar solicitudes en la tabla `HLP_PETICIONES` de Supabase. Los endpoints deben:
-   - Mapear entre los nombres legacy de la BD (español) y los nombres modernos en el código (inglés)
-   - Validar que el usuario autenticado del JWT coincida con `USUSOLICITA` (obtenido del email o metadata del usuario)
-   - Manejar la conversión entre estados numéricos legacy (CODESTADO: 1-PENDIENTE, 2-TRAMITE, 3-SOLUCIONADO) y estados textuales modernos para la UI ('Pendiente', 'En Trámite', 'Solucionado')
-   - Usar los campos legacy existentes: `DESCRIPTION` para la descripción del problema, `SOLUCION` para la respuesta al usuario, `FESOLICITA` para fecha de creación, etc.
+- **Fase 1**: Endpoints de Acción Simulados (Amerika y Dominio) - Implementación prioritaria
+- **Fase 2**: Autenticación JWT de Supabase
+- **Fase 3**: Endpoints CRUD de Mesa de Servicio
+- **Fase 4**: Validaciones y Manejo de Errores
+- **Fase 5**: Documentación y Testing
 
-4. Endpoints de Acción: Implementar los endpoints simulados que el Agente AI llamará. Estos deben estar protegidos con un token o clave API secreta dedicada.
-
-    - POST /api/apps/amerika/execute-action (Acepta user_id, action_type)
-    - POST /api/apps/dominio/execute-action (Acepta user_id, action_type)
-
-5. Simulación de Lógica Externa: Dentro de los endpoints de Acción (Tarea 4), incluir una lógica simple de simulación (e.g., un sleep de 2 segundos para simular el procesamiento y un log de la acción realizada) para devolver una respuesta de éxito o fracaso.
+Cada fase contiene objetivos, tareas específicas, archivos a modificar/crear y notas de implementación.
 
 ## PASO 3. Frontend de Mesa de Servicio (React) (Equipo Frontend)
 
@@ -110,7 +107,7 @@ Tareas Específicas:
 3. Formulario de Solicitud: Crear un formulario simple para registrar una nueva solicitud. Debe capturar:
     - CODCATEGORIA (selección de categoría: 300 o 400, o permitir que el usuario seleccione de HLP_CATEGORIAS)
     - DESCRIPTION (Descripción del problema ingresada por el usuario)
-    - El campo `USUSOLICITA` debe derivarse del email o metadata del usuario autenticado (obtenido del JWT de Supabase) antes de insertar el registro en `HLP_PETICIONES`
+    - El campo `USUSOLICITA` debe derivarse del email del usuario autenticado (obtenido del JWT de Supabase): extraer la parte antes de `@` del email. Ejemplo: `mzuloaga@aguasdemanizales.com.co` → `USUSOLICITA = "mzuloaga"`. El backend debe validar que el username no exceda 25 caracteres.
     - `FESOLICITA` se establecerá automáticamente con la fecha/hora actual al crear el registro
 
 4. Visualización de Solicitudes: Implementar una tabla o lista que muestre las solicitudes creadas por el usuario logeado, mostrando:
