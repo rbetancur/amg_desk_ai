@@ -12,6 +12,9 @@ dist
 dist-ssr
 *.local
 
+# Vite cache
+.vite
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
@@ -25,6 +28,8 @@ dist-ssr
 
 # Environment variables
 .env
+.env.*
+*.bak
 .env.local
 .env.production.local
 .env.development.local
