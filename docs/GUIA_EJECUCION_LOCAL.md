@@ -2,11 +2,21 @@
 
 Esta guía te permite ejecutar y probar los componentes implementados del proyecto AGM Desk AI en tu máquina local.
 
+> **Método Recomendado**: Usa **Supabase** como base de datos. No requiere Docker y es más simple de configurar. Ver detalles en `agm-simulated-enviroment/backend/docs/DATABASE_SETUP.md`
+
 ---
 
 ## 🚀 Inicio Rápido (Backend)
 
 ### 1. Configurar Base de Datos
+
+**Opción Recomendada: Supabase**
+
+1. Crea un proyecto en Supabase (https://supabase.com)
+2. Obtén la connection string desde Settings > Database
+3. Configura las variables de entorno (ver paso 2)
+
+**Opción Opcional: PostgreSQL Local (solo si no puedes usar Supabase)**
 
 ```bash
 cd agm-simulated-enviroment/backend
@@ -21,6 +31,21 @@ docker ps | grep postgres
 ### 2. Configurar Variables de Entorno
 
 Crear archivo `.env` en `agm-simulated-enviroment/backend/`:
+
+**Para Supabase (Recomendado):**
+
+```env
+DATABASE_URL=postgresql://postgres:[PASSWORD]@db.[PROJECT-REF].supabase.co:5432/postgres
+SUPABASE_URL=https://[PROJECT-REF].supabase.co
+SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+SUPABASE_JWT_SECRET=your-jwt-secret-here
+API_SECRET_KEY=mi-clave-secreta-123
+CORS_ORIGINS=http://localhost:3000,http://localhost:5173
+PROJECT_NAME=AGM Desk AI Backend
+VERSION=0.1.0
+```
+
+**Para PostgreSQL Local (Opcional):**
 
 ```env
 DATABASE_URL=postgresql://agm_user:agm_password@localhost:5432/agm_desk_db

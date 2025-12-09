@@ -1,6 +1,8 @@
 # Instrucciones para Iniciar Base de Datos Local
 
-## Opción 1: Usar el Script Automático (Recomendado)
+> **Nota**: Estas instrucciones son para PostgreSQL local con Docker, que es **opcional**. Se recomienda usar **Supabase** como método principal. Ver `agm-simulated-enviroment/backend/docs/DATABASE_SETUP.md` para configuración con Supabase.
+
+## Opción 1: Usar el Script Automático (Solo para PostgreSQL Local)
 
 ```bash
 cd agm-simulated-enviroment/backend
@@ -124,19 +126,19 @@ Si ya tienes PostgreSQL corriendo en el puerto 5432:
    docker exec -it agm-desk-postgres-local psql -U agm_user -d agm_desk_db
    ```
 
-## Alternativa: Usar Supabase
+## Método Recomendado: Usar Supabase
 
-Si no puedes usar Docker, puedes usar Supabase:
+> **Nota**: Supabase es el método **recomendado** para desarrollo y producción. No requiere Docker y es más simple de configurar.
 
 1. Crea una cuenta en https://supabase.com
 2. Crea un nuevo proyecto
-3. Obtén las credenciales desde Project Settings > API
+3. Obtén las credenciales desde Project Settings > Database (connection string) y Settings > API (API keys)
 4. Actualiza el archivo `.env`:
    ```env
-   DATABASE_URL=postgresql://postgres.[PROJECT-REF]:[PASSWORD]@aws-0-[REGION].pooler.supabase.com:5432/postgres
+   DATABASE_URL=postgresql://postgres.[PASSWORD]@db.[PROJECT-REF].supabase.co:5432/postgres
    SUPABASE_URL=https://[PROJECT-REF].supabase.co
    SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-   SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+   SUPABASE_JWT_SECRET=your-jwt-secret-here
    ```
 5. Ejecuta migraciones: `alembic upgrade head`
 

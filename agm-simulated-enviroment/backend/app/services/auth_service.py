@@ -73,7 +73,10 @@ def extract_username_from_email(email: str) -> str:
 
 def verify_supabase_jwt(token: str) -> dict:
     """
-    Valida token JWT de Supabase usando SUPABASE_ANON_KEY.
+    Valida token JWT de Supabase usando SUPABASE_JWT_SECRET.
+    
+    Los tokens JWT de Supabase se firman con el JWT Secret, no con la ANON_KEY.
+    El JWT Secret se puede obtener desde: Dashboard > Settings > API > JWT Secret
     
     Args:
         token: Token JWT a validar
@@ -84,16 +87,20 @@ def verify_supabase_jwt(token: str) -> dict:
     Raises:
         HTTPException: Si el token es inválido o expirado
     """
-    if not settings.SUPABASE_ANON_KEY:
+    # Preferir JWT_SECRET sobre ANON_KEY para validar tokens
+    jwt_secret = settings.SUPABASE_JWT_SECRET or settings.SUPABASE_ANON_KEY
+    
+    if not jwt_secret:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="SUPABASE_ANON_KEY no configurada",
+            detail="SUPABASE_JWT_SECRET o SUPABASE_ANON_KEY no configurada. Obtén JWT Secret desde Dashboard > Settings > API > JWT Secret",
         )
     
     try:
+        # Intentar validar con HS256 (algoritmo usado por Supabase para JWT Secret)
         payload = jwt.decode(
             token,
-            settings.SUPABASE_ANON_KEY,
+            jwt_secret,
             algorithms=["HS256"],
             audience="authenticated",
         )

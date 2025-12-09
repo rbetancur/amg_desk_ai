@@ -75,6 +75,10 @@ def run_migrations_online() -> None:
     connectable = create_engine(
         url,
         poolclass=pool.NullPool,
+        pool_pre_ping=True,  # Verificar conexiones antes de usarlas
+        connect_args={
+            "connect_timeout": 10,  # Timeout de conexión de 10 segundos
+        },
     )
 
     with connectable.connect() as connection:

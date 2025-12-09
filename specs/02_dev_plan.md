@@ -98,25 +98,19 @@ Cada fase contiene objetivos, tareas específicas, archivos a modificar/crear y 
 
 "Desarrollar una interfaz de usuario mínima en React para registrar solicitudes y visualizar su estado en tiempo real. La interfaz debe usar el SDK de Supabase para manejar la autenticación y la interacción inicial con los datos."
 
-Tareas Específicas:
+**Nota**: Para la especificación técnica detallada de este paso, incluyendo todas las tareas específicas, arquitectura, componentes, integración con Supabase Realtime, validaciones y orden de implementación, consulta el documento:
 
-1. Configuración del Proyecto: Inicializar el proyecto React y configurar el SDK de Supabase para el frontend.
+👉 **[Especificación Detallada: Frontend de Mesa de Servicio (React)](./04_frontend_detailed.md)**
 
-2. Página de Autenticación: Implementar la interfaz de Login/Registro usando el cliente de autenticación de Supabase.
+El documento detallado incluye:
 
-3. Formulario de Solicitud: Crear un formulario simple para registrar una nueva solicitud. Debe capturar:
-    - CODCATEGORIA (selección de categoría: 300 o 400, o permitir que el usuario seleccione de HLP_CATEGORIAS)
-    - DESCRIPTION (Descripción del problema ingresada por el usuario)
-    - El campo `USUSOLICITA` debe derivarse del email del usuario autenticado (obtenido del JWT de Supabase): extraer la parte antes de `@` del email. Ejemplo: `mzuloaga@aguasdemanizales.com.co` → `USUSOLICITA = "mzuloaga"`. El backend debe validar que el username no exceda 25 caracteres.
-    - `FESOLICITA` se establecerá automáticamente con la fecha/hora actual al crear el registro
+- **Fase 1**: Configuración del Proyecto y Setup - Establecer estructura base
+- **Fase 2**: Autenticación con Supabase - Login/Registro y gestión de sesión
+- **Fase 3**: Formulario de Solicitudes - Crear nuevas solicitudes
+- **Fase 4**: Visualización de Solicitudes con Realtime - Tabla y actualizaciones en tiempo real
+- **Fase 5**: Validaciones y Manejo de Errores - Robustez y experiencia de usuario
 
-4. Visualización de Solicitudes: Implementar una tabla o lista que muestre las solicitudes creadas por el usuario logeado, mostrando:
-    - CODESTADO (convertido a texto legible: Pendiente, En Trámite, Solucionado)
-    - DESCRIPTION (descripción del problema)
-    - SOLUCION (respuesta al usuario final cuando esté disponible)
-    - FESOLICITA (fecha de creación)
-    - FESOLUCION (fecha de solución, si aplica)
-    - AI_CLASSIFICATION_DATA (opcionalmente mostrar información de clasificación de la IA si está disponible)
+Cada fase contiene objetivos, tareas específicas, archivos a modificar/crear y notas de implementación.
 
 ## Siguiente Paso
 

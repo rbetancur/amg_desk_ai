@@ -1,113 +1,16 @@
 # Guía de Configuración de Base de Datos
 
-Esta guía explica cómo configurar la base de datos para el proyecto AGM Desk AI. El proyecto soporta dos entornos:
+Esta guía explica cómo configurar Supabase para el proyecto AGM Desk AI.
 
-1. **PostgreSQL Local (Docker)**: Para desarrollo y pruebas locales
-2. **Supabase**: Para PoC y producción, con Realtime y RLS configurados
+**IMPORTANTE**: Este proyecto **solo soporta Supabase** como base de datos. No se soporta PostgreSQL local.
 
 ## Tabla de Contenidos
 
-- [PostgreSQL Local](#postgresql-local)
 - [Supabase](#supabase)
 - [Migraciones](#migraciones)
 - [Verificación](#verificación)
+- [Redis (Opcional)](#redis-opcional)
 - [Troubleshooting](#troubleshooting)
-
----
-
-## PostgreSQL Local
-
-### Requisitos
-
-- Docker Desktop instalado y corriendo
-- Docker Compose (incluido en Docker Desktop)
-
-### Configuración Paso a Paso
-
-#### 1. Iniciar PostgreSQL con Docker
-
-```bash
-cd agm-simulated-enviroment/backend
-docker-compose up -d
-```
-
-Esto iniciará un contenedor PostgreSQL 16 con las siguientes credenciales:
-- **Usuario**: `agm_user`
-- **Contraseña**: `agm_password`
-- **Base de datos**: `agm_desk_db`
-- **Puerto**: `5432`
-
-#### 2. Verificar que PostgreSQL esté corriendo
-
-```bash
-docker ps | grep postgres
-```
-
-Deberías ver el contenedor `agm-desk-postgres-local` en la lista.
-
-#### 3. Configurar archivo .env
-
-Crea un archivo `.env` en `agm-simulated-enviroment/backend/` con el siguiente contenido:
-
-```env
-DATABASE_URL=postgresql://agm_user:agm_password@localhost:5432/agm_desk_db
-PROJECT_NAME=AGM Desk AI Backend
-VERSION=0.1.0
-```
-
-O copia desde `.env.example` y descomenta la línea de PostgreSQL Local.
-
-#### 4. Ejecutar migraciones
-
-```bash
-# Activar entorno virtual si es necesario
-source .venv/bin/activate
-
-# Ejecutar migraciones
-alembic upgrade head
-```
-
-#### 5. Verificar tablas creadas
-
-```bash
-docker exec -it agm-desk-postgres-local psql -U agm_user -d agm_desk_db -c "\dt"
-```
-
-Deberías ver las tablas `HLP_CATEGORIAS` y `HLP_PETICIONES`.
-
-### Comandos Útiles
-
-```bash
-# Ver logs de PostgreSQL
-docker-compose logs -f postgres
-
-# Detener PostgreSQL
-docker-compose down
-
-# Detener y eliminar volúmenes (⚠️ elimina todos los datos)
-docker-compose down -v
-
-# Conectar a PostgreSQL con psql
-docker exec -it agm-desk-postgres-local psql -U agm_user -d agm_desk_db
-
-# Verificar datos seed
-docker exec -it agm-desk-postgres-local psql -U agm_user -d agm_desk_db -c "SELECT * FROM HLP_CATEGORIAS;"
-```
-
-### Usando el Script de Configuración
-
-Puedes usar el script automatizado:
-
-```bash
-./scripts/setup-db.sh local
-```
-
-Este script:
-- Verifica que Docker esté corriendo
-- Inicia el contenedor PostgreSQL
-- Espera a que PostgreSQL esté listo
-- Crea el archivo `.env` si no existe
-- Ejecuta las migraciones automáticamente
 
 ---
 
@@ -149,6 +52,7 @@ Este script:
 2. Copia los siguientes valores:
    - **Project URL**: `https://[PROJECT-REF].supabase.co`
    - **anon public key**: Empieza con `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...`
+   - **JWT Secret**: En la misma página, busca "JWT Secret" (necesario para validación de tokens)
    - **service_role key**: ⚠️ **Mantén esta clave segura**, permite bypass de RLS
 
 #### 4. Configurar archivo .env
@@ -156,20 +60,49 @@ Este script:
 Crea un archivo `.env` en `agm-simulated-enviroment/backend/` con el siguiente contenido:
 
 ```env
-# Connection String de Supabase
+# Connection String de Supabase (REQUERIDA)
 DATABASE_URL=postgresql://postgres.[PROJECT-REF]:[YOUR-PASSWORD]@aws-0-[REGION].pooler.supabase.com:5432/postgres
 
-# API Keys de Supabase
+# API Keys de Supabase (REQUERIDAS)
 SUPABASE_URL=https://[PROJECT-REF].supabase.co
 SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+SUPABASE_JWT_SECRET=your-jwt-secret-here
+
+# SUPABASE_SERVICE_ROLE_KEY (Opcional, requerida para Agente AI)
+SUPABASE_SERVICE_ROLE_KEY=
+
+# API Key para endpoints de acción
+API_SECRET_KEY=dev-api-secret-key-12345
+
+# CORS
+CORS_ORIGINS=http://localhost:3000,http://localhost:5173,http://localhost:8080
 
 # Configuración de la aplicación
 PROJECT_NAME=AGM Desk AI Backend
 VERSION=0.1.0
+
+# Redis (Opcional - para cache)
+REDIS_ENABLED=false
+REDIS_HOST=localhost
+REDIS_PORT=6379
+REDIS_DB=0
 ```
 
 Reemplaza los valores entre corchetes con tus credenciales reales.
+
+**Usando el Script de Configuración**:
+
+Puedes usar el script automatizado que te guiará paso a paso:
+
+```bash
+./scripts/setup-db.sh
+```
+
+Este script:
+- Verifica que tengas las credenciales de Supabase
+- Crea el archivo `.env` si no existe
+- Valida la configuración
+- Ejecuta las migraciones automáticamente
 
 #### 5. Ejecutar Migraciones
 
@@ -191,8 +124,6 @@ El Realtime es necesario para que el Agente AI detecte nuevas solicitudes en tie
 2. Busca la tabla `HLP_PETICIONES` en la lista
 3. Activa el toggle de **Realtime** para `HLP_PETICIONES`
 4. Asegúrate de que los eventos **INSERT** y **UPDATE** estén habilitados
-
-**Nota**: Realtime solo funciona en Supabase, no en PostgreSQL local. Para desarrollo local, el Agente AI puede usar polling como alternativa.
 
 #### 7. Configurar Row Level Security (RLS)
 
@@ -431,7 +362,6 @@ ORDER BY policyname;
    - **Secure email change**: 
      - Toggle que requiere confirmación en ambos emails (actual y nuevo) cuando un usuario cambia su dirección de correo
      - **Recomendado para producción**: Actívalo (ON) para mayor seguridad
-     - Descripción: "Users will be required to confirm any email change on both the old email address and new email address"
    
    - **Secure password change**: 
      - Toggle que requiere que el usuario haya iniciado sesión recientemente (últimas 24 horas) para cambiar su contraseña
@@ -515,8 +445,8 @@ O verifica manualmente:
 # Verificar migraciones aplicadas
 alembic current
 
-# Verificar tablas
-# En Supabase Dashboard > Database > Tables
+# Verificar en Dashboard
+# Database > Tables > Verificar que HLP_CATEGORIAS y HLP_PETICIONES existan
 ```
 
 #### 9.1. Validar Políticas RLS
@@ -565,20 +495,6 @@ Las pruebas 6-9 del script `test-rls-username.sql` requieren usuarios autenticad
 - **Prueba 9**: Validar que las políticas RLS funcionan correctamente (usuarios solo ven sus propias solicitudes)
 
 Ver el archivo `agm-simulated-enviroment/backend/scripts/test-rls-username.sql` para detalles completos de las pruebas.
-
-### Usando el Script de Configuración
-
-Puedes usar el script automatizado:
-
-```bash
-./scripts/setup-db.sh supabase
-```
-
-Este script:
-- Verifica que el archivo `.env` exista
-- Verifica que `DATABASE_URL` esté configurada
-- Ejecuta las migraciones automáticamente
-- Muestra los próximos pasos en el Dashboard
 
 ---
 
@@ -638,26 +554,11 @@ alembic revision -m "Descripción de la migración"
 
 Este script verifica:
 - Configuración de `.env`
-- Conexión a la base de datos
-- Estado de las tablas
-- Datos seed (categorías)
+- Variables de Supabase requeridas
+- Conexión a Supabase
+- Estado de las migraciones
 
 ### Verificación Manual
-
-#### PostgreSQL Local
-
-```bash
-# Verificar conexión
-docker-compose exec postgres pg_isready -U agm_user -d agm_desk_db
-
-# Listar tablas
-docker exec -it agm-desk-postgres-local psql -U agm_user -d agm_desk_db -c "\dt"
-
-# Verificar datos seed
-docker exec -it agm-desk-postgres-local psql -U agm_user -d agm_desk_db -c "SELECT * FROM HLP_CATEGORIAS;"
-```
-
-#### Supabase
 
 ```bash
 # Verificar migraciones aplicadas
@@ -692,50 +593,55 @@ WHERE tablename = 'HLP_PETICIONES';
 
 ---
 
+## Redis (Opcional)
+
+Redis es completamente opcional y se usa solo para cache. Si Redis no está disponible, la aplicación funcionará sin cache (degraded pero funcional).
+
+### Configuración Local (Docker)
+
+Si quieres usar Redis localmente durante desarrollo:
+
+1. Inicia Redis con Docker:
+```bash
+docker-compose up -d redis
+```
+
+2. Configura en `.env`:
+```env
+REDIS_ENABLED=true
+REDIS_HOST=localhost
+REDIS_PORT=6379
+REDIS_DB=0
+```
+
+### Configuración Externa
+
+Si quieres usar Redis desde un servicio externo (ej: Upstash, Redis Cloud):
+
+1. Obtén las credenciales de tu servicio Redis
+2. Configura en `.env`:
+```env
+REDIS_ENABLED=true
+REDIS_HOST=your-redis-host.com
+REDIS_PORT=6379
+REDIS_DB=0
+# Si requiere autenticación, agrega:
+# REDIS_PASSWORD=your-password
+```
+
+### Verificar Redis
+
+```bash
+# Verificar que Redis está corriendo (si es local)
+docker ps | grep redis
+
+# Verificar conexión desde Python
+python -c "from redis import Redis; r = Redis(host='localhost', port=6379); print(r.ping())"
+```
+
+---
+
 ## Troubleshooting
-
-### PostgreSQL Local
-
-#### Error: "Docker no está corriendo"
-
-**Solución**: Inicia Docker Desktop y espera a que esté completamente iniciado.
-
-#### Error: "Port 5432 is already allocated"
-
-**Solución**: Otra instancia de PostgreSQL está usando el puerto 5432.
-
-```bash
-# Ver qué proceso está usando el puerto
-lsof -i :5432
-
-# O cambiar el puerto en docker-compose.yml
-ports:
-  - "5433:5432"  # Cambiar 5432 a 5433
-```
-
-#### Error: "Connection refused"
-
-**Solución**: El contenedor no está corriendo o no está listo.
-
-```bash
-# Verificar estado del contenedor
-docker ps -a | grep postgres
-
-# Ver logs
-docker-compose logs postgres
-
-# Reiniciar contenedor
-docker-compose restart postgres
-```
-
-#### Error: "relation does not exist"
-
-**Solución**: Las migraciones no se han ejecutado.
-
-```bash
-# Ejecutar migraciones
-alembic upgrade head
-```
 
 ### Supabase
 
@@ -761,12 +667,18 @@ alembic upgrade head
 - Si usas `SUPABASE_SERVICE_ROLE_KEY`, debería bypass RLS automáticamente
 - Verifica las políticas RLS en el Dashboard
 
+#### Error: "DATABASE_URL apunta a localhost"
+
+**Solución**: 
+- Este proyecto solo soporta Supabase, no PostgreSQL local
+- Verifica que `DATABASE_URL` en `.env` apunte a Supabase
+- Obtén la connection string desde: Supabase Dashboard > Settings > Database > Connection String
+
 #### Realtime no funciona
 
 **Solución**:
 - Verifica que Realtime esté habilitado para `HLP_PETICIONES` en Database > Replication
 - Verifica que los eventos INSERT y UPDATE estén habilitados
-- Realtime solo funciona en Supabase, no en PostgreSQL local
 
 #### Migraciones fallan
 
@@ -799,6 +711,20 @@ pip install alembic
 - Verifica que `DATABASE_URL` esté definida en `.env`
 - Verifica que no haya espacios alrededor del `=` en `.env`
 
+#### Error: "SUPABASE_URL, SUPABASE_ANON_KEY, o SUPABASE_JWT_SECRET no configuradas"
+
+**Solución**:
+- Estas variables son requeridas para este proyecto
+- Obtén las variables desde: Supabase Dashboard > Settings > API
+- Agrega las variables a tu archivo `.env`
+
+#### Redis no está disponible
+
+**Solución**:
+- Redis es opcional. Si no está disponible, la aplicación funcionará sin cache
+- Si quieres usar Redis, verifica que esté corriendo y configurado correctamente en `.env`
+- Verifica que `REDIS_ENABLED=true` si quieres usar Redis
+
 ---
 
 ## Notas Importantes
@@ -807,8 +733,9 @@ pip install alembic
 - ✅ El archivo `.env.example` debe estar commiteado como template
 - 🔒 **Mantén `SUPABASE_SERVICE_ROLE_KEY` segura**, permite bypass de RLS
 - 📝 **Documenta cambios** en las políticas RLS y configuración de Realtime
-- 🔄 **Realtime solo funciona en Supabase**, no en PostgreSQL local
+- 🔄 **Realtime solo funciona en Supabase**
 - 🗺️ **Mapeo de usuarios**: `USUSOLICITA` contiene el username extraído del email del usuario (parte antes de `@`). Ejemplo: `mzuloaga@aguasdemanizales.com.co` → `USUSOLICITA = "mzuloaga"`. El backend extrae automáticamente este valor del JWT del usuario autenticado.
+- ⚠️ **Este proyecto solo soporta Supabase**. No se soporta PostgreSQL local.
 
 ---
 
@@ -817,5 +744,3 @@ pip install alembic
 - [Documentación de Supabase](https://supabase.com/docs)
 - [Documentación de Alembic](https://alembic.sqlalchemy.org/)
 - [Documentación de PostgreSQL](https://www.postgresql.org/docs/)
-- [Documentación de Docker Compose](https://docs.docker.com/compose/)
-

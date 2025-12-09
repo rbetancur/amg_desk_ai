@@ -1,11 +1,14 @@
 """
 Router para endpoints CRUD de Mesa de Servicio.
 """
+import logging
 from datetime import datetime
 from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.exc import OperationalError, DatabaseError
+import asyncpg
 from app.db.base import get_db
 from app.models.entities import Request, Category
 from app.models.schemas import (
@@ -74,42 +77,87 @@ async def list_requests(
     """
     Lista las solicitudes del usuario autenticado con paginación.
     """
-    ususolicita = current_user["ususolicita"]
-    
-    # Calcular total antes de aplicar limit/offset
-    count_result = await db.execute(
-        select(func.count()).select_from(Request).where(
-            Request.ususolicita == ususolicita
+    try:
+        ususolicita = current_user["ususolicita"]
+        
+        # Calcular total antes de aplicar limit/offset
+        count_result = await db.execute(
+            select(func.count()).select_from(Request).where(
+                Request.ususolicita == ususolicita
+            )
         )
-    )
-    total = count_result.scalar() or 0
-    
-    # Aplicar limit máximo de 100
-    limit = min(pagination.limit, 100)
-    offset = pagination.offset
-    
-    # Obtener solicitudes
-    result = await db.execute(
-        select(Request)
-        .where(Request.ususolicita == ususolicita)
-        .order_by(Request.fesolicita.desc())
-        .limit(limit)
-        .offset(offset)
-    )
-    requests = result.scalars().all()
-    
-    # Calcular has_more
-    has_more = (offset + limit) < total
-    
-    return PaginatedResponse(
-        items=[RequestResponse.model_validate(req) for req in requests],
-        pagination=PaginationMeta(
-            total=total,
-            limit=limit,
-            offset=offset,
-            has_more=has_more,
-        ),
-    )
+        total = count_result.scalar() or 0
+        
+        # Aplicar limit máximo de 100
+        limit = min(pagination.limit, 100)
+        offset = pagination.offset
+        
+        # Obtener solicitudes
+        result = await db.execute(
+            select(Request)
+            .where(Request.ususolicita == ususolicita)
+            .order_by(Request.fesolicita.desc())
+            .limit(limit)
+            .offset(offset)
+        )
+        requests = result.scalars().all()
+        
+        # Calcular has_more
+        has_more = (offset + limit) < total
+        
+        # Si no hay solicitudes, devolver una respuesta vacía exitosa
+        return PaginatedResponse(
+            items=[RequestResponse.model_validate(req) for req in requests],
+            pagination=PaginationMeta(
+                total=total,
+                limit=limit,
+                offset=offset,
+                has_more=has_more,
+            ),
+        )
+    except Exception as e:
+        # Log del error para debugging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Error al listar solicitudes para usuario {current_user.get('ususolicita', 'unknown')}: {str(e)}", exc_info=True)
+        
+        # Re-lanzar HTTPException para que FastAPI las maneje correctamente
+        if isinstance(e, HTTPException):
+            raise
+        
+        # Detectar errores de conexión a la base de datos
+        error_str = str(e).lower()
+        error_type = type(e).__name__
+        
+        # Detectar errores de SQLAlchemy
+        is_db_error = (
+            isinstance(e, (OperationalError, DatabaseError)) or
+            isinstance(e.__cause__, (OperationalError, DatabaseError)) or
+            isinstance(e.__cause__, asyncpg.exceptions.PostgresError) or
+            isinstance(e.__cause__, asyncpg.exceptions.InvalidPasswordError) or
+            isinstance(e.__cause__, asyncpg.exceptions.ConnectionDoesNotExistError) or
+            "connection" in error_str or
+            "database" in error_str or
+            "postgres" in error_str or
+            "asyncpg" in error_str or
+            "connection refused" in error_str or
+            "errno 61" in error_str or
+            "timeout" in error_str or
+            "could not connect" in error_str or
+            "authentication failed" in error_str or
+            "password authentication failed" in error_str
+        )
+        
+        if is_db_error:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="No se pudo conectar a la base de datos. Verifica que DATABASE_URL esté configurada correctamente en el archivo .env y que la base de datos esté disponible."
+            )
+        
+        # Para otros errores, devolver un error 500 con mensaje genérico
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error al obtener solicitudes: {str(e)}"
+        )
 
 
 @router.post(
