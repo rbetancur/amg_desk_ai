@@ -82,25 +82,78 @@ export function useFetchRequests(
           filter: `USUSOLICITA=eq.${username}`,
         },
         (payload) => {
+          // Función helper para normalizar el objeto de Realtime a Request
+          const normalizeRequest = (data: any): Request | null => {
+            if (!data) return null
+            
+            // Normalizar nombres de columnas (pueden venir en mayúsculas desde Realtime)
+            const normalized: any = {}
+            const fieldMap: Record<string, string> = {
+              CODPETICIONES: 'codpeticiones',
+              CODCATEGORIA: 'codcategoria',
+              CODESTADO: 'codestado',
+              CODPRIORIDAD: 'codprioridad',
+              CODGRAVEDAD: 'codgravedad',
+              CODFRECUENCIA: 'codfrecuencia',
+              USUSOLICITA: 'ususolicita',
+              FESOLICITA: 'fesolicita',
+              DESCRIPTION: 'description',
+              SOLUCION: 'solucion',
+              FESOLUCION: 'fesolucion',
+              CODUSOLUCION: 'codusolucion',
+              CODGRUPO: 'codgrupo',
+              OPORTUNA: 'oportuna',
+              FECCIERRE: 'feccierre',
+              CODMOTCIERRE: 'codmotcierre',
+              AI_CLASSIFICATION_DATA: 'ai_classification_data',
+            }
+            
+            // Mapear campos a minúsculas
+            for (const [upperKey, lowerKey] of Object.entries(fieldMap)) {
+              if (data[upperKey] !== undefined) {
+                normalized[lowerKey] = data[upperKey]
+              } else if (data[lowerKey] !== undefined) {
+                normalized[lowerKey] = data[lowerKey]
+              }
+            }
+            
+            // Validar que tenga codpeticiones (requerido)
+            if (!normalized.codpeticiones) {
+              console.warn('Realtime payload missing codpeticiones:', data)
+              return null
+            }
+            
+            return normalized as Request
+          }
+
           if (payload.eventType === 'INSERT') {
             // Agregar nueva solicitud
-            setRequests((prev) => [payload.new as Request, ...prev])
-            setPagination((prev) => ({ ...prev, total: prev.total + 1 }))
+            const newRequest = normalizeRequest(payload.new)
+            if (newRequest) {
+              setRequests((prev) => [newRequest, ...prev])
+              setPagination((prev) => ({ ...prev, total: prev.total + 1 }))
+            }
           } else if (payload.eventType === 'UPDATE') {
             // Actualizar solicitud existente
-            setRequests((prev) =>
-              prev.map((req) =>
-                req.codpeticiones === (payload.new as Request).codpeticiones
-                  ? (payload.new as Request)
-                  : req
+            const updatedRequest = normalizeRequest(payload.new)
+            if (updatedRequest) {
+              setRequests((prev) =>
+                prev.map((req) =>
+                  req.codpeticiones === updatedRequest.codpeticiones
+                    ? updatedRequest
+                    : req
+                )
               )
-            )
+            }
           } else if (payload.eventType === 'DELETE') {
             // Remover solicitud
-            setRequests((prev) =>
-              prev.filter((req) => req.codpeticiones !== (payload.old as Request).codpeticiones)
-            )
-            setPagination((prev) => ({ ...prev, total: Math.max(0, prev.total - 1) }))
+            const deletedRequest = normalizeRequest(payload.old)
+            if (deletedRequest) {
+              setRequests((prev) =>
+                prev.filter((req) => req.codpeticiones !== deletedRequest.codpeticiones)
+              )
+              setPagination((prev) => ({ ...prev, total: Math.max(0, prev.total - 1) }))
+            }
           }
         }
       )

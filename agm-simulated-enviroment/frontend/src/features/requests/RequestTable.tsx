@@ -164,8 +164,8 @@ export function RequestTable() {
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-slate-200">
-            {requests.map((request) => (
-              <tr key={request.codpeticiones} className="hover:bg-slate-50">
+            {requests.map((request, index) => (
+              <tr key={request.codpeticiones ?? `request-${index}`} className="hover:bg-slate-50">
                 <td className="px-6 py-4 whitespace-nowrap">
                   <EstadoBadge codestado={request.codestado} />
                 </td>
@@ -202,8 +202,8 @@ export function RequestTable() {
 
       {/* Vista Mobile: Cards */}
       <div className="md:hidden divide-y divide-slate-200">
-        {requests.map((request) => (
-          <div key={request.codpeticiones} className="p-4">
+        {requests.map((request, index) => (
+          <div key={request.codpeticiones ?? `request-${index}`} className="p-4">
             <div className="flex items-start justify-between mb-2">
               <EstadoBadge codestado={request.codestado} />
             </div>
