@@ -2,7 +2,7 @@
 
 Este documento resume el estado actual de las implementaciones y qué componentes se pueden ejecutar localmente para pruebas.
 
-**Fecha de revisión**: 2024-01-XX
+**Fecha de revisión**: 2024-12-08
 
 ---
 
@@ -10,22 +10,28 @@ Este documento resume el estado actual de las implementaciones y qué componente
 
 ### ✅ Implementado y Listo para Probar
 
-1. **Backend FastAPI** - Completamente implementado
-   - ✅ Endpoints de acción (Amerika y Dominio)
-   - ✅ Endpoints CRUD de Mesa de Servicio
-   - ✅ Autenticación JWT de Supabase
-   - ✅ Validaciones y manejo de errores
+1. **PASO 1: Modelo de Datos y Configuración de Supabase** - ✅ **Completamente implementado**
+   - ✅ Modelos SQLAlchemy (Request, Category) con nombres legacy
+   - ✅ Migraciones Alembic (001_initial_migration.py)
+   - ✅ Tablas HLP_CATEGORIAS y HLP_PETICIONES con todos los campos legacy
+   - ✅ Campo AI_CLASSIFICATION_DATA (JSONB) para auditoría de IA
+   - ✅ Scripts SQL para configuración de RLS (setup-rls-username.sql)
+   - ✅ Scripts de verificación y testing (test-rls-username.sql)
+   - ✅ Documentación completa de setup (DATABASE_SETUP.md)
+   - ⚠️ **RLS debe configurarse manualmente en Supabase Dashboard** (scripts disponibles)
+
+2. **PASO 2: Backend FastAPI** - ✅ **Completamente implementado**
+   - ✅ Endpoints de acción (Amerika y Dominio) - Fase 1
+   - ✅ Autenticación JWT de Supabase - Fase 2
+   - ✅ Endpoints CRUD de Mesa de Servicio - Fase 3
+   - ✅ Validaciones y manejo de errores - Fase 4
    - ✅ Generación de contraseñas seguras
-   - ✅ Base de datos configurada (PostgreSQL local o Supabase)
+   - ✅ Extracción de username del email para USUSOLICITA
+   - ✅ Validación de transiciones de estado
+   - ✅ Paginación en endpoints de listado
+   - ✅ Documentación Swagger/ReDoc automática
 
-2. **Base de Datos** - Configurada y lista
-   - ✅ Modelos SQLAlchemy (Request, Category)
-   - ✅ Migraciones Alembic
-   - ✅ Scripts de setup y verificación
-
-### ⚠️ Parcialmente Implementado
-
-1. **Frontend React** - ✅ **Completamente implementado y funcional**
+3. **PASO 3: Frontend React** - ✅ **Completamente implementado**
    - ✅ Estructura de carpetas y organización completa
    - ✅ Servicios de API implementados (supabase_client, requests, auth)
    - ✅ Hooks personalizados implementados (useFetchRequests con Realtime, useSupabaseAuth)
@@ -36,91 +42,119 @@ Este documento resume el estado actual de las implementaciones y qué componente
    - ✅ Tabla de solicitudes con actualizaciones en tiempo real (Supabase Realtime)
    - ✅ Diseño responsive y corporativo
    - ✅ Manejo de errores y ErrorBoundary
+   - ✅ Paginación con controles (Anterior/Siguiente)
+   - ✅ Visualización de AI_CLASSIFICATION_DATA
 
-2. **Agente AI** - Estructura creada, servicios básicos
-   - ✅ Estructura de carpetas
-   - ⚠️ Servicios necesitan implementación completa
-   - ⚠️ Falta integración con Gemini AI
-   - ⚠️ Falta listener de Realtime
+### ⚠️ Parcialmente Implementado
+
+1. **Agente AI (Orquestador)** - ❌ **No implementado**
+   - ✅ Estructura de carpetas creada
+   - ❌ main.py vacío (sin implementación)
+   - ❌ config.py vacío (sin configuración)
+   - ❌ realtime_listener.py vacío (sin implementación)
+   - ❌ ai_processor.py vacío (sin integración con Gemini AI)
+   - ❌ action_executor.py vacío (sin implementación)
 
 ### ❌ No Implementado
 
 1. **Tests automatizados**
-2. **Documentación de API completa**
+   - ❌ Tests unitarios para backend
+   - ❌ Tests de integración
+   - ❌ Tests E2E para flujo completo
+2. **Documentación de API completa** (Swagger básico disponible)
 3. **CI/CD**
+4. **Tabla HLP_DOCUMENTACION** (opcional para Fase 1, no implementada)
 
 ---
 
 ## 🚀 Componentes Listos para Ejecutar Localmente
 
-### 1. Backend FastAPI
+### 1. Base de Datos (Supabase)
+
+**Estado**: ✅ **Modelos y migraciones implementados, RLS requiere configuración manual**
+
+#### Requisitos Previos
+
+- Cuenta en Supabase (https://supabase.com)
+- Proyecto creado en Supabase
+
+#### Estado de Implementación
+
+- ✅ **Modelos SQLAlchemy**: Completamente implementados con nombres legacy
+  - `Category` → tabla `HLP_CATEGORIAS`
+  - `Request` → tabla `HLP_PETICIONES`
+- ✅ **Migraciones Alembic**: Migración inicial creada (001_initial_migration.py)
+  - Crea tablas HLP_CATEGORIAS y HLP_PETICIONES
+  - Inserta categorías iniciales (300, 400)
+  - Crea índices para optimización
+- ✅ **Scripts SQL**: Disponibles para configuración de RLS
+  - `setup-rls-username.sql`: Función y políticas RLS
+  - `test-rls-username.sql`: Script de validación
+- ⚠️ **RLS (Row Level Security)**: Debe configurarse manualmente en Supabase Dashboard
+  - Ver documentación en `agm-simulated-enviroment/backend/docs/DATABASE_SETUP.md` sección 7
+  - Scripts SQL disponibles para facilitar la configuración
+
+#### Pasos para Configurar
+
+1. **Crear proyecto en Supabase** (ver DATABASE_SETUP.md)
+2. **Ejecutar migraciones**:
+   ```bash
+   cd agm-simulated-enviroment/backend
+   uv run alembic upgrade head
+   ```
+3. **Configurar RLS** (manual en Supabase Dashboard):
+   - Habilitar RLS en tabla HLP_PETICIONES
+   - Ejecutar script `setup-rls-username.sql` desde SQL Editor
+   - Verificar con script `test-rls-username.sql`
+
+---
+
+### 2. Backend FastAPI
 
 **Estado**: ✅ **Completamente implementado y funcional**
 
 #### Requisitos Previos
 
 - Python 3.11+
-- Cuenta en Supabase (recomendado) o Docker Desktop (opcional, para PostgreSQL local)
+- Cuenta en Supabase configurada
 - `uv` o `pip` para gestión de dependencias
 
-> **Nota**: Se recomienda usar **Supabase** como base de datos principal. PostgreSQL local solo es necesario si necesitas desarrollo completamente offline.
+> **Nota**: Este proyecto **solo soporta Supabase** como base de datos. No se soporta PostgreSQL local.
 
 #### Pasos para Ejecutar
 
-1. **Configurar Base de Datos (Supabase Recomendado o PostgreSQL Local Opcional)**
-
-```bash
-cd agm-simulated-enviroment/backend
-
-# Iniciar PostgreSQL
-docker-compose up -d
-
-# Verificar que está corriendo
-docker ps | grep postgres
-```
-
-2. **Configurar Variables de Entorno**
+1. **Configurar Variables de Entorno**
 
 Crear archivo `.env` en `agm-simulated-enviroment/backend/`:
 
-**Opción Recomendada: Supabase**
-
 ```env
-# Connection String de Supabase (Recomendado)
-DATABASE_URL=postgresql://postgres:[PASSWORD]@db.[PROJECT-REF].supabase.co:5432/postgres
+# Connection String de Supabase (REQUERIDA)
+# Obtener desde: Supabase Dashboard > Settings > Database > Connection String (Transaction mode)
+DATABASE_URL=postgresql://postgres.[PROJECT-REF]:[PASSWORD]@aws-0-[REGION].pooler.supabase.com:5432/postgres
 
-# API Keys de Supabase
+# API Keys de Supabase (REQUERIDAS)
+# Obtener desde: Supabase Dashboard > Settings > API
 SUPABASE_URL=https://[PROJECT-REF].supabase.co
 SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 SUPABASE_JWT_SECRET=your-jwt-secret-here
 
+# SUPABASE_SERVICE_ROLE_KEY (Opcional, requerida para Agente AI)
+SUPABASE_SERVICE_ROLE_KEY=
+
 # API Key para endpoints de acción
-API_SECRET_KEY=tu-api-secret-key-aqui
+API_SECRET_KEY=dev-api-secret-key-12345
 
 # CORS (para desarrollo local)
-CORS_ORIGINS=http://localhost:3000,http://localhost:5173
+CORS_ORIGINS=http://localhost:3000,http://localhost:5173,http://localhost:8080
 
 # Configuración de la aplicación
 PROJECT_NAME=AGM Desk AI Backend
 VERSION=0.1.0
 ```
 
-**Opción Opcional: PostgreSQL Local (solo si no puedes usar Supabase)**
-
-```env
-# Base de datos local (Opcional - No recomendado)
-DATABASE_URL=postgresql://agm_user:agm_password@localhost:5432/agm_desk_db
-
-# API Key para endpoints de acción
-API_SECRET_KEY=tu-api-secret-key-aqui
-
-# CORS (para desarrollo local)
-CORS_ORIGINS=http://localhost:3000,http://localhost:5173
-
-# Configuración de la aplicación
-PROJECT_NAME=AGM Desk AI Backend
-VERSION=0.1.0
-```
+**Importante**: 
+- Reemplazar `[PROJECT-REF]`, `[PASSWORD]`, `[REGION]` con valores reales de tu proyecto Supabase
+- Ver guía completa en `agm-simulated-enviroment/backend/docs/DATABASE_SETUP.md`
 
 3. **Instalar Dependencias**
 
@@ -212,56 +246,6 @@ curl -X POST http://localhost:8000/api/apps/dominio/execute-action \
 ```
 
 **Nota**: Para probar endpoints de Mesa de Servicio, necesitas un token JWT válido de Supabase. Ver sección "Autenticación" más abajo.
-
----
-
-### 2. Base de Datos PostgreSQL Local
-
-**Estado**: ✅ **Configurada y lista para usar**
-
-#### Configuración
-
-El proyecto incluye `docker-compose.yml` que configura PostgreSQL 16:
-
-- **Usuario**: `agm_user`
-- **Contraseña**: `agm_password`
-- **Base de datos**: `agm_desk_db`
-- **Puerto**: `5432`
-
-#### Scripts Disponibles
-
-```bash
-# Configurar base de datos (interactivo)
-./scripts/setup-db.sh local
-
-# Verificar conexión
-./scripts/check-db.sh
-
-# Ejecutar migraciones
-./scripts/run-migrations.sh
-
-# Verificar tablas creadas
-python scripts/verify-tables.py
-```
-
-#### Verificar Tablas
-
-```bash
-# Conectar a PostgreSQL
-docker exec -it agm-desk-postgres-local psql -U agm_user -d agm_desk_db
-
-# Listar tablas
-\dt
-
-# Ver estructura de HLP_PETICIONES
-\d HLP_PETICIONES
-
-# Ver estructura de HLP_CATEGORIAS
-\d HLP_CATEGORIAS
-
-# Ver categorías iniciales
-SELECT * FROM HLP_CATEGORIAS;
-```
 
 ---
 
@@ -366,7 +350,7 @@ Asegurarse de que el backend FastAPI esté corriendo en `http://localhost:8000` 
 npm run dev
 ```
 
-La aplicación estará disponible en `http://localhost:3000`
+La aplicación estará disponible en `http://localhost:5173` (puerto por defecto de Vite)
 
 5. **Build para Producción**:
 
@@ -413,55 +397,67 @@ Los archivos compilados estarán en `dist/`
 
 ---
 
-### 4. Agente AI
+### 4. Agente AI (Orquestador)
 
-**Estado**: ⚠️ **Estructura creada, servicios básicos necesitan implementación**
+**Estado**: ❌ **No implementado - Estructura creada pero archivos vacíos**
 
 #### Estructura Disponible
 
 ```
-agent/
-├── main.py                    # ⚠️ Necesita implementación
-├── core/
-│   └── config.py             # ⚠️ Necesita configuración
-└── services/
-    ├── realtime_listener.py  # ⚠️ Necesita implementación
-    ├── ai_processor.py       # ⚠️ Necesita implementación
-    └── action_executor.py    # ⚠️ Necesita implementación
+agm-desk-ai/
+├── agent/
+│   ├── main.py                    # ❌ Vacío (sin implementación)
+│   ├── core/
+│   │   └── config.py             # ❌ Vacío (sin configuración)
+│   └── services/
+│       ├── realtime_listener.py  # ❌ Vacío (sin implementación)
+│       ├── ai_processor.py       # ❌ Vacío (sin integración con Gemini AI)
+│       └── action_executor.py    # ❌ Vacío (sin implementación)
 ```
 
 #### Estado de Implementación
 
-- ✅ **Estructura de carpetas**: Completa
-- ⚠️ **Servicios**: Necesitan implementación completa
-- ⚠️ **Integración con Gemini AI**: No implementada
-- ⚠️ **Listener de Realtime**: No implementado
-- ⚠️ **Ejecutor de acciones**: No implementado
+- ✅ **Estructura de carpetas**: Creada
+- ❌ **main.py**: Archivo vacío, necesita implementación del punto de entrada
+- ❌ **config.py**: Archivo vacío, necesita configuración de variables de entorno
+- ❌ **realtime_listener.py**: Archivo vacío, necesita listener de Supabase Realtime
+- ❌ **ai_processor.py**: Archivo vacío, necesita integración con Gemini AI
+- ❌ **action_executor.py**: Archivo vacío, necesita ejecutor de acciones del backend
 
-#### Para Ejecutar (cuando esté completo)
+#### Requisitos para Implementación
 
-```bash
-cd agm-desk-ai
+Según el plan de desarrollo (`specs/02_dev_plan.md`), el Agente AI debe:
 
-# Instalar dependencias
-uv sync
-# o
-pip install -e .
+1. **Escuchar eventos Realtime** de Supabase en la tabla `HLP_PETICIONES`
+2. **Procesar nuevas solicitudes** con Gemini AI para:
+   - Clasificar el tipo de aplicación (Amerika o Dominio)
+   - Determinar la acción a ejecutar
+   - Extraer parámetros necesarios
+3. **Ejecutar acciones** llamando a los endpoints del backend FastAPI:
+   - `/api/apps/amerika/execute-action`
+   - `/api/apps/dominio/execute-action`
+4. **Actualizar solicitudes** en Supabase con:
+   - Estado actualizado (CODESTADO)
+   - Solución (SOLUCION)
+   - Datos de clasificación (AI_CLASSIFICATION_DATA)
+   - Usuario que resuelve (CODUSOLUCION = 'AGENTE-MS')
 
-# Configurar .env con:
-# - SUPABASE_URL
-# - SUPABASE_SERVICE_ROLE_KEY
-# - API_SECRET_KEY (para llamar al backend)
-# - BACKEND_URL (URL del backend FastAPI)
-# - GEMINI_API_KEY (para procesamiento de IA)
+#### Variables de Entorno Requeridas (cuando esté implementado)
 
-# Ejecutar agente
-uv run python agent/main.py
-# o
-python agent/main.py
+```env
+# Supabase
+SUPABASE_URL=https://[PROJECT-REF].supabase.co
+SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+
+# Backend FastAPI
+BACKEND_URL=http://localhost:8000
+API_SECRET_KEY=dev-api-secret-key-12345
+
+# Gemini AI
+GEMINI_API_KEY=your-gemini-api-key-here
 ```
 
-**Nota**: El agente AI necesita implementación completa antes de poder ejecutarse.
+**Nota**: El agente AI es el siguiente paso según el plan de desarrollo. Actualmente no está implementado.
 
 ---
 
@@ -511,10 +507,25 @@ curl -X GET http://localhost:8000/api/requests \
 
 ## 📋 Checklist de Pruebas Locales
 
+### Base de Datos (Supabase)
+
+- [ ] Proyecto creado en Supabase
+- [ ] Connection String obtenida y configurada
+- [ ] API Keys obtenidas (SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_JWT_SECRET)
+- [ ] Migraciones ejecutadas (`alembic upgrade head`)
+- [ ] Tablas creadas (`HLP_CATEGORIAS`, `HLP_PETICIONES`)
+- [ ] Categorías iniciales insertadas (300, 400)
+- [ ] RLS habilitado en tabla HLP_PETICIONES
+- [ ] Función `get_username_from_auth_user()` creada
+- [ ] Políticas RLS configuradas (usando script setup-rls-username.sql)
+- [ ] Realtime habilitado para tabla HLP_PETICIONES
+- [ ] Puede insertar solicitudes (desde frontend o backend)
+- [ ] Puede consultar solicitudes (con RLS funcionando)
+
 ### Backend FastAPI
 
-- [ ] PostgreSQL local corriendo con Docker
-- [ ] Archivo `.env` configurado correctamente
+- [ ] Archivo `.env` configurado correctamente (con Supabase)
+- [ ] Dependencias instaladas (`uv sync` o `pip install -e .`)
 - [ ] Migraciones ejecutadas (`alembic upgrade head`)
 - [ ] Servidor iniciado (`uvicorn app.main:app --reload`)
 - [ ] Health check responde (`curl http://localhost:8000/health`)
@@ -522,31 +533,33 @@ curl -X GET http://localhost:8000/api/requests \
 - [ ] Endpoint de Amerika funciona (con API Key)
 - [ ] Endpoint de Dominio funciona (con API Key)
 - [ ] Endpoints de Mesa de Servicio funcionan (con JWT de Supabase)
+- [ ] Validación de transiciones de estado funciona
+- [ ] Paginación funciona correctamente
 
-### Base de Datos
+### Frontend React
 
-- [ ] Tablas creadas (`HLP_CATEGORIAS`, `HLP_PETICIONES`)
-- [ ] Categorías iniciales insertadas (300, 400)
-- [ ] Puede insertar solicitudes
-- [ ] Puede consultar solicitudes
-
-### Frontend (cuando esté completo)
-
-- [ ] Dependencias instaladas
-- [ ] Servidor de desarrollo corriendo
+- [ ] Dependencias instaladas (`npm install`)
+- [ ] Archivo `.env.local` configurado (SUPABASE_URL, SUPABASE_ANON_KEY, BACKEND_URL)
+- [ ] Servidor de desarrollo corriendo (`npm run dev`)
+- [ ] Aplicación accesible en http://localhost:5173
 - [ ] Login funciona con Supabase
+- [ ] Registro de usuarios funciona
 - [ ] Formulario de solicitud funciona
+- [ ] Validación de formularios con Zod funciona
 - [ ] Tabla de solicitudes muestra datos
+- [ ] Paginación funciona (Anterior/Siguiente)
 - [ ] Realtime funciona (actualizaciones en tiempo real)
+- [ ] Visualización de AI_CLASSIFICATION_DATA funciona
+- [ ] Manejo de errores funciona (ErrorBoundary)
 
-### Agente AI (cuando esté completo)
+### Agente AI (No implementado aún)
 
-- [ ] Configuración de `.env` completa
-- [ ] Conexión a Supabase funciona
-- [ ] Listener de Realtime funciona
-- [ ] Procesamiento de IA funciona
-- [ ] Ejecución de acciones funciona
-- [ ] Actualización de solicitudes funciona
+- [ ] ❌ Configuración de `.env` completa
+- [ ] ❌ Conexión a Supabase funciona
+- [ ] ❌ Listener de Realtime funciona
+- [ ] ❌ Procesamiento de IA funciona
+- [ ] ❌ Ejecución de acciones funciona
+- [ ] ❌ Actualización de solicitudes funciona
 
 ---
 
@@ -554,16 +567,18 @@ curl -X GET http://localhost:8000/api/requests \
 
 ### Backend no inicia
 
-1. Verificar que PostgreSQL esté corriendo: `docker ps | grep postgres`
-2. Verificar variables de entorno en `.env`
+1. Verificar que `DATABASE_URL` apunte a Supabase (no a localhost)
+2. Verificar variables de entorno en `.env` (SUPABASE_URL, SUPABASE_ANON_KEY requeridas)
 3. Verificar que las migraciones se ejecutaron: `alembic current`
 4. Ver logs del servidor para errores específicos
+5. El backend valida automáticamente que DATABASE_URL apunte a Supabase al iniciar
 
 ### Error de conexión a base de datos
 
-1. Verificar que PostgreSQL esté corriendo
-2. Verificar `DATABASE_URL` en `.env`
-3. Probar conexión manual: `docker exec -it agm-desk-postgres-local psql -U agm_user -d agm_desk_db`
+1. Verificar que `DATABASE_URL` esté correctamente configurada con la connection string de Supabase
+2. Verificar que la contraseña en la connection string sea correcta
+3. Verificar que el proyecto de Supabase esté activo
+4. Probar conexión desde Supabase Dashboard > SQL Editor
 
 ### Error 401 en endpoints de acción
 
@@ -590,24 +605,49 @@ curl -X GET http://localhost:8000/api/requests \
 
 ## 🎯 Próximos Pasos
 
-1. **Completar Frontend React**
-   - Implementar componentes UI completos
-   - Configurar build y ejecución
-   - Integrar con backend
+### Prioridad Alta (Siguiente Fase)
 
-2. **Completar Agente AI**
-   - Implementar listener de Realtime
-   - Integrar con Gemini AI
-   - Implementar ejecutor de acciones
-   - Implementar actualización de solicitudes
+1. **Implementar Agente AI (Orquestador)**
+   - Implementar `main.py` con punto de entrada
+   - Implementar `config.py` para gestión de configuración
+   - Implementar `realtime_listener.py` para escuchar eventos de Supabase
+   - Implementar `ai_processor.py` con integración a Gemini AI
+   - Implementar `action_executor.py` para llamar endpoints del backend
+   - Implementar lógica de actualización de solicitudes en Supabase
+   - Ver especificación en `specs/02_dev_plan.md` (Siguiente Paso)
 
-3. **Testing**
-   - Tests unitarios para backend
-   - Tests de integración
-   - Tests E2E para flujo completo
+### Prioridad Media
 
-4. **Documentación**
-   - Documentación de API completa
-   - Guías de usuario
-   - Guías de despliegue
+2. **Testing**
+   - Tests unitarios para backend (FastAPI)
+   - Tests de integración (Backend + Supabase)
+   - Tests E2E para flujo completo (Frontend + Backend + Agente AI)
+
+3. **Documentación**
+   - Documentación de API completa (OpenAPI/Swagger mejorado)
+   - Guías de usuario para el frontend
+   - Guías de despliegue (Vercel para frontend, Railway para backend)
+   - Documentación de configuración del Agente AI
+
+### Prioridad Baja (Futuro)
+
+4. **Mejoras y Optimizaciones**
+   - Implementar tabla HLP_DOCUMENTACION (opcional para Fase 1)
+   - Optimizar consultas de base de datos
+   - Implementar cache (Redis) para categorías y consultas frecuentes
+   - Mejoras de rendimiento en Realtime
+   - Implementar CI/CD pipeline
+
+## 📊 Resumen de Progreso
+
+| Componente | Estado | Progreso |
+|------------|--------|----------|
+| PASO 1: Base de Datos | ✅ Completo | 100% |
+| PASO 2: Backend FastAPI | ✅ Completo | 100% |
+| PASO 3: Frontend React | ✅ Completo | 100% |
+| Agente AI | ❌ No iniciado | 0% |
+| Testing | ❌ No iniciado | 0% |
+| CI/CD | ❌ No iniciado | 0% |
+
+**Progreso General Fase 1**: ~75% (3 de 4 pasos principales completados)
 
