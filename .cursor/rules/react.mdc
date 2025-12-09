@@ -1,0 +1,70 @@
+---
+alwaysApply: true
+---
+
+# Principios de Arquitectura en React
+
+1.Componentes Funcionales y Hooks:
+
+- Preferir componentes funcionales sobre los componentes de clase para todo el desarrollo.
+
+- Utilizar Hooks (useState, useEffect, etc.) para la gestión del estado y los efectos secundarios, siguiendo estrictamente las Reglas de Hooks.
+
+- Extraer lógica reutilizable (como la interacción con la API de Supabase) en Custom Hooks (ej., useFetchRequests, useSupabaseAuth).
+
+2.Modularidad y Estructura:
+
+- Organizar archivos por funcionalidad o característica (ej., una carpeta requests/ que contiene el formulario, la tabla y los hooks relacionados con las solicitudes).
+
+- Favorecer la composición: crear componentes pequeños y reutilizables que manejen una única responsabilidad.
+
+- Utilizar el patrón de exportaciones con nombre para componentes y utilidades.
+
+3.Integración con Supabase:
+
+- Manejar la Autenticación (login/registro) utilizando el SDK de Supabase directamente en el frontend.
+
+- Para la visualización de las solicitudes, considerar el uso de la funcionalidad Realtime de Supabase en el frontend para actualizar la lista de solicitudes en tiempo real, ofreciendo una mejor experiencia de usuario.
+
+4.Rendimiento y Optimización:
+
+- Utilizar React.memo para evitar re-renders innecesarios en componentes funcionales, especialmente aquellos que reciben datos estáticos o poco cambiantes.
+
+- Optimizar las dependencias del useEffect para asegurar que el código solo se ejecute cuando sea estrictamente necesario.
+
+5.Robustez y Manejo de Errores:
+
+- Implementar guard clauses y el patrón if-return para manejar estados de carga (isLoading) y errores (hasError) al principio de los componentes y custom hooks.
+
+- Manejar los errores de la API de forma amigable para el usuario.
+
+6.Estilos
+
+- Usar Tailwind CSS para un desarrollo ágil y mantener la coherencia visual en todos los componentes del frontend.
+
+7.Reglas de Seguridad y Validación de Datos
+
+Estas reglas refuerzan la validación en el frontend sin delegar la confianza en él (la validación crítica siempre está en el backend):
+
+- Validación de Datos en el Cliente: Utilizar bibliotecas de validación de esquemas como Zod o Yup en combinación con bibliotecas de gestión de formularios (e.g., React Hook Form). Esto proporciona feedback instantáneo al usuario, mejorando la experiencia antes de enviar la solicitud al servidor.
+
+- Sanitización de Inputs: Realizar una limpieza básica de los inputs del usuario (ej., eliminar leading/trailing spaces) antes de enviar el payload al backend. La sanitización profunda contra inyección debe recaer principalmente en el backend (FastAPI).
+
+- Manejo Seguro del Token: Asegurar que el JWT de Supabase se almacene en la memoria de la aplicación (o en cookies seguras con la configuración HttpOnly y Secure si se usan server-side). Evitar el almacenamiento directo en localStorage debido a riesgos de XSS.
+
+- Configuración CORS: El frontend (desplegado en Vercel) debe configurarse para comunicarse solo con el dominio exacto del backend (desplegado en Railway), aplicando políticas estrictas de CORS (Cross-Origin Resource Sharing).
+
+8.Reglas para Facilitar la Migración a Producción
+La facilidad de migración es crítica, dado que las APIs simuladas deben ser reemplazadas por APIs de producción sin reescribir la lógica de la Mesa de Servicio.
+
+- Patrón de Repositorio o Capa de Servicio (Service Layer):
+
+    - Abstracción de API: Crear una capa de servicio dedicada (e.g., una carpeta api_services/) que contenga todas las funciones que interactúan con el backend.
+
+    - Ejemplo: En lugar de llamar fetch('/api/america/...') directamente, se llama a api_services.america.executeAction().
+
+- Gestión Centralizada de Endpoints: Definir todas las URLs base de los endpoints del backend en un solo lugar (e.g., un archivo de configuración o variables de entorno).
+
+    - Migración: Cuando el backend se divida en microservicios reales (América y Dominio en deployments separados), solo se necesitará actualizar una variable de entorno para que api_services apunte al nuevo dominio sin modificar el código del componente React.
+
+- Manejo Consistente de Errores: La capa de servicio debe estandarizar el formato de los errores del backend. Esto asegura que la lógica de manejo de errores en los componentes de React sea consistente, independientemente de si el error proviene de una API simulada o de una API de producción.

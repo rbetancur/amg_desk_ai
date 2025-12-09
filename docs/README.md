@@ -1,10 +1,10 @@
-# AMG Desk AI
+# AGM Desk AI
 
 Sistema automatizado de atención a mesas de servicio para gestión de accesos corporativos.
 
 ## Descripción
 
-AMG Desk AI es una solución de automatización diseñada para optimizar y agilizar el proceso de atención de solicitudes relacionadas con cuentas de acceso corporativas. El sistema automatiza el flujo completo que actualmente requiere intervención manual de una auxiliar, desde la interpretación de la solicitud hasta la ejecución de acciones técnicas y la comunicación con el funcionario.
+AGM Desk AI es una solución de automatización diseñada para optimizar y agilizar el proceso de atención de solicitudes relacionadas con cuentas de acceso corporativas. El sistema automatiza el flujo completo que actualmente requiere intervención manual de una auxiliar, desde la interpretación de la solicitud hasta la ejecución de acciones técnicas y la comunicación con el funcionario.
 
 ## Problema que resuelve
 
@@ -79,11 +79,11 @@ El proyecto está organizado en tres componentes principales:
 
 3. **Agente AI**: Servicio consumidor y orquestador independiente que procesa solicitudes en tiempo real mediante Supabase Realtime. Utiliza `pyproject.toml` para gestión de dependencias y está estructurado con separación modular (core, services).
 
-### Estructura del Backend Unificado (amg-simulated-enviroment/backend/)
+### Estructura del Backend Unificado (agm-simulated-enviroment/backend/)
 
 Aquí reside el FastAPI Monolítico Modular, que maneja tanto la Mesa de Servicio como los endpoints simulados de América y Dominio.
 
-```amg-simulated-enviroment/
+```agm-simulated-enviroment/
 backend/
 ├── app/
 │   ├── __init__.py
@@ -99,23 +99,39 @@ backend/
 │   │   ├── service_desk.py        # Rutas CRUD para solicitudes
 │   │   ├── app_amerika.py         # Rutas de acción: /api/apps/amerika/...
 │   │   └── app_domain.py          # Rutas de acción: /api/apps/domain/...
-│   ├── models/                    # Modelos Pydantic para Entradas/Salidas
+│   ├── models/                    # Modelos SQLAlchemy y Pydantic
 │   │   ├── __init__.py
-│   │   └── schemas.py
+│   │   ├── entities.py            # Modelos SQLAlchemy (Category, Request)
+│   │   └── schemas.py             # Esquemas Pydantic para validación
 │   └── services/                  # Lógica de negocio e interacción con Supabase
 │       ├── __init__.py
 │       ├── supabase_service.py    # Lógica de conexión a Supabase
 │       └── auth_service.py        # Lógica para validar JWT de Supabase
+├── alembic/                       # Migraciones de base de datos
+│   ├── versions/                  # Archivos de migración
+│   │   └── 001_initial_migration.py
+│   ├── env.py                     # Configuración de Alembic
+│   └── script.py.mako             # Template para migraciones
+├── scripts/                       # Scripts de utilidad
+│   ├── setup-db.sh                # Configurar base de datos (local o Supabase)
+│   ├── check-db.sh                # Verificar conexión y estado de BD
+│   ├── run-migrations.sh          # Ejecutar migraciones de Alembic
+│   └── verify-tables.py           # Verificar tablas creadas (Python)
+├── docs/                          # Documentación
+│   ├── DATABASE_SETUP.md          # Guía completa de configuración de BD
+│   └── VERIFY_MIGRATIONS.md       # Guía para verificar migraciones
 ├── pyproject.toml                 # Dependencias y configuración del proyecto
+├── docker-compose.yml              # Configuración de PostgreSQL local
+├── alembic.ini                     # Configuración de Alembic
 ├── .env.example                   # Ejemplo de variables de entorno
 └── .gitignore                     # Archivos a ignorar en git
 ```
 
-### Estructura del Frontend (amg-simulated-enviroment/frontend/)
+### Estructura del Frontend (agm-simulated-enviroment/frontend/)
 
 Esta estructura sigue los principios de modularidad y custom hooks para facilitar la migración.
 
-```amg-simulated-enviroment/frontend/
+```agm-simulated-enviroment/frontend/
 ├── src/
 │   ├── api_services/        # Capa de Abstracción de APIs (crucial para migración)
 │   │   ├── supabase_client.ts
@@ -186,11 +202,11 @@ Esta estructura sigue los principios de modularidad y custom hooks para facilita
    - `Dashboard.tsx`
    - `LoginPage.tsx`
 
-### Estructura del Agente AI (amg-desk-ai/)
+### Estructura del Agente AI (agm-desk-ai/)
 
 Este es el servicio consumidor y orquestador que se ejecuta de forma independiente.
 
-```amg-desk-ai/
+```agm-desk-ai/
 ├── agent/
 │   ├── __init__.py
 │   ├── main.py                    # Lógica principal del "Listener"
@@ -259,7 +275,7 @@ Las tablas de base de datos mantendrán los nombres legacy en español (ej: `HLP
 -FECCIERRE (DATE, NOT NULL, DESCRIPCION: FECHA Y HORA EN QUE SE CERRO LA SOLICITUD)
 -CODMOTCIERRE (NUMBER(5), NULL, DESCRIPCION:ESTABLECE UN MOTIVO DE CIERRE, DEFECTO:  5-Respuesta Final)
 
-request_id (UUID / SERIAL BIGINT) 
+request_id (UUID / SERIAL BIGINT)
 user_id (UUID) - Clave Foránea (FK) al Usuario que creó la solicitud.
 created_at (TIMESTAMPZ) - Fecha y hora de creación.
 app_type (TEXT / ENUM) - Clasificación: 'América' o 'Dominio'.
@@ -289,6 +305,38 @@ ai_classification_data (JSONB) - Datos opcionales de auditoría de la IA.
 ## Estado del proyecto
 
 En desarrollo - El sistema está siendo diseñado para automatizar completamente el flujo descrito en el documento de flujo actual.
+
+## Scripts de Utilidad
+
+El backend incluye varios scripts de utilidad para facilitar el desarrollo y la configuración:
+
+### Scripts de Base de Datos
+
+- **`scripts/setup-db.sh`**: Configura la base de datos (PostgreSQL local o Supabase)
+  - Uso: `./scripts/setup-db.sh [local|supabase]`
+  - Automatiza la configuración e instalación de dependencias
+
+- **`scripts/check-db.sh`**: Verifica la conexión y estado de la base de datos
+  - Uso: `./scripts/check-db.sh`
+  - Detecta automáticamente si estás usando PostgreSQL local o Supabase
+
+- **`scripts/run-migrations.sh`**: Ejecuta las migraciones de Alembic
+  - Uso: `./scripts/run-migrations.sh`
+  - Instala dependencias automáticamente si es necesario
+
+- **`scripts/verify-tables.py`**: Script Python para verificar que las tablas se crearon correctamente
+  - Uso: `python scripts/verify-tables.py`
+
+### Documentación
+
+- **`docs/DATABASE_SETUP.md`**: Guía completa de configuración de base de datos
+  - Instrucciones para PostgreSQL local y Supabase
+  - Configuración de Realtime y RLS
+  - Troubleshooting
+
+- **`docs/VERIFY_MIGRATIONS.md`**: Guía rápida para verificar migraciones
+  - Múltiples métodos de verificación
+  - Soluciones rápidas a problemas comunes
 
 ## Notas importantes
 
