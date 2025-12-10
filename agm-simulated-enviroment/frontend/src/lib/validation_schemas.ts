@@ -17,13 +17,42 @@ export const signUpSchema = z.object({
 
 // Esquema de validación para crear solicitud
 export const requestCreateSchema = z.object({
-  codcategoria: z.number().refine((val) => val === 300 || val === 400, {
-    message: 'La categoría debe ser 300 o 400',
-  }),
+  codcategoria: z
+    .preprocess(
+      (val) => {
+        // Manejar valores vacíos, undefined, null o NaN
+        if (val === '' || val === null || val === undefined) {
+          return undefined
+        }
+        // Si es NaN (cuando valueAsNumber convierte string vacío)
+        if (typeof val === 'number' && isNaN(val)) {
+          return undefined
+        }
+        // Convertir string a number si es necesario
+        if (typeof val === 'string' && val !== '') {
+          const num = Number(val)
+          return isNaN(num) ? undefined : num
+        }
+        return val
+      },
+      z
+        .number({
+          required_error: 'Debes seleccionar una categoría',
+          invalid_type_error: 'Debes seleccionar una categoría válida',
+        })
+        .refine(
+          (val) => val === 300 || val === 400,
+          {
+            message: 'Debes seleccionar una categoría de la lista',
+          }
+        )
+    ),
   description: z
-    .string()
-    .min(1, 'La descripción es requerida')
-    .max(4000, 'La descripción no puede exceder 4000 caracteres'),
+    .string({
+      required_error: 'La descripción es requerida',
+    })
+    .min(1, 'La descripción del problema es requerida. Por favor, describe el problema que necesitas resolver.')
+    .max(4000, 'La descripción no puede exceder 4000 caracteres. Por favor, acorta tu descripción.'),
 })
 
 // Esquema para categoría

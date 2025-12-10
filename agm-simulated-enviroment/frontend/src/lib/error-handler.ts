@@ -1,10 +1,56 @@
 import type { AuthError } from '@supabase/supabase-js'
 
 /**
+ * Información de error extraída de respuestas del backend
+ */
+export interface ErrorInfo {
+  message: string
+  actionSuggestion?: string
+}
+
+/**
  * Verifica si un error es de tipo API
  */
 export function isApiError(error: unknown): boolean {
   return error instanceof Error || (typeof error === 'object' && error !== null && 'message' in error)
+}
+
+/**
+ * Extrae información de error (message y action_suggestion) de respuestas del backend
+ */
+export function extractErrorInfo(error: unknown): ErrorInfo {
+  // Intentar extraer de respuesta del backend FastAPI
+  if (error && typeof error === 'object' && 'response' in error) {
+    const response = (error as any).response
+    if (response?.data) {
+      const data = response.data
+      // Verificar si tiene estructura estándar de error del backend
+      if (data.message) {
+        return {
+          message: data.message,
+          actionSuggestion: data.action_suggestion || data.actionSuggestion,
+        }
+      }
+      // Si tiene detail como string (estructura antigua)
+      if (typeof data.detail === 'string') {
+        return {
+          message: data.detail,
+        }
+      }
+      // Si detail es un objeto con estructura de error
+      if (typeof data.detail === 'object' && data.detail?.message) {
+        return {
+          message: data.detail.message,
+          actionSuggestion: data.detail.action_suggestion || data.detail.actionSuggestion,
+        }
+      }
+    }
+  }
+
+  // Fallback a manejo tradicional
+  return {
+    message: handleApiError(error),
+  }
 }
 
 /**
@@ -46,22 +92,22 @@ export function handleApiError(error: unknown): string {
 
     // Errores del backend FastAPI
     if (errorMessage.includes('401') || errorMessage.includes('unauthorized')) {
-      return 'Sesión expirada. Por favor, inicia sesión nuevamente.'
+      return 'Tu sesión ha expirado. Por favor, inicia sesión nuevamente.'
     }
     if (errorMessage.includes('403') || errorMessage.includes('forbidden')) {
-      return 'No tienes permisos para realizar esta acción.'
+      return 'No tienes permisos para realizar esta acción. Si necesitas acceso, contacta al administrador.'
     }
     if (errorMessage.includes('404') || errorMessage.includes('not found')) {
-      return 'Recurso no encontrado.'
+      return 'El recurso que buscas no existe o ya fue eliminado. Regresa a la página anterior o verifica la URL.'
     }
     if (errorMessage.includes('422') || errorMessage.includes('validation') || errorMessage.includes('unprocessable')) {
-      return 'Datos inválidos. Verifica la información ingresada.'
+      return 'Algunos campos tienen errores. Revisa los campos marcados en rojo y corrige la información antes de enviar.'
     }
     if (errorMessage.includes('500') || errorMessage.includes('internal server error')) {
-      return 'Error del servidor. Por favor, intenta más tarde.'
+      return 'Ocurrió un error en el servidor. Intenta nuevamente en unos minutos. Si el problema persiste, contacta al soporte.'
     }
     if (errorMessage.includes('503') || errorMessage.includes('service unavailable')) {
-      return 'El servicio no está disponible temporalmente. Por favor, intenta más tarde.'
+      return 'El servicio no está disponible temporalmente. Intenta nuevamente en unos minutos.'
     }
   }
 
