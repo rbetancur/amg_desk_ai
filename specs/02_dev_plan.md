@@ -112,6 +112,20 @@ El documento detallado incluye:
 
 Cada fase contiene objetivos, tareas específicas, archivos a modificar/crear y notas de implementación.
 
-## Siguiente Paso
+## PASO 4. Agente AI (Orquestador) (Equipo Backend/AI)
 
-Una vez completadas estas tareas, el siguiente paso será desarrollar el Agente AI (Orquestador) para cerrar el ciclo de automatización.
+"Desarrollar el Agente AI (Orquestador) que escucha eventos Realtime de Supabase, procesa solicitudes con Gemini AI, ejecuta acciones en el backend FastAPI y actualiza las solicitudes en la base de datos."
+
+**Nota**: Para la especificación técnica detallada de este paso, incluyendo todas las tareas específicas, arquitectura, integración con Gemini AI, Supabase Realtime, ejecución de acciones y orden de implementación, consulta el documento:
+
+👉 **[Especificación Detallada: Agente AI (Orquestador)](./05_agent_ai_detailed.md)**
+
+El documento detallado incluye:
+
+- **Fase 1**: Configuración del Proyecto y Setup - Establecer estructura base
+- **Fase 2**: Ejecutor de Acciones - Integración con backend FastAPI
+- **Fase 3**: Procesamiento con Gemini AI - Clasificación de solicitudes
+- **Fase 4**: Listener de Realtime - Suscripción a eventos de Supabase
+- **Fase 5**: Punto de Entrada y Orquestación - Integración completa
+
+Cada fase contiene objetivos, tareas específicas, archivos a modificar/crear y notas de implementación.

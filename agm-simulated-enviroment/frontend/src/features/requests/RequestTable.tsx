@@ -6,6 +6,8 @@ import { useFetchRequests } from '../../hooks/useFetchRequests'
 import { getEstadoText, getCategoryName } from '../../lib/constants'
 import type { Request, AIClassificationData } from '../../lib/types'
 import { RequestDetailModal } from './RequestDetailModal'
+import { extractErrorInfo } from '../../lib/error-handler'
+import { ErrorMessage } from '../../components/ui/ErrorMessage'
 
 function EstadoBadge({ codestado }: { codestado: number | null }) {
   const estado = codestado ?? 1
@@ -109,22 +111,13 @@ export function RequestTable() {
   }
 
   if (error) {
-    // Si el error es de autenticación, mostrar un mensaje más específico
-    const isAuthError = error.message.toLowerCase().includes('autorizado') || 
-                       error.message.toLowerCase().includes('sesión') ||
-                       error.message.toLowerCase().includes('401')
+    const errorInfo = extractErrorInfo(error)
     
     return (
       <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-8">
-        <div className="text-center text-red-600">
-          <AlertCircle className="w-6 h-6 mx-auto mb-2" />
-          <p className="font-medium mb-1">Error al cargar solicitudes</p>
-          <p className="text-sm">{error.message}</p>
-          {isAuthError && (
-            <p className="text-xs text-slate-500 mt-2">
-              Por favor, cierra sesión e inicia sesión nuevamente.
-            </p>
-          )}
+        <div className="max-w-md mx-auto">
+          <h3 className="text-lg font-semibold text-slate-900 mb-4">Error al cargar solicitudes</h3>
+          <ErrorMessage message={errorInfo.message} actionSuggestion={errorInfo.actionSuggestion} />
         </div>
       </div>
     )

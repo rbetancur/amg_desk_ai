@@ -1,10 +1,12 @@
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Plus, AlertCircle, CheckCircle } from 'lucide-react'
+import { Plus, CheckCircle, AlertCircle } from 'lucide-react'
 import { requestCreateSchema, type RequestCreateInput } from '../../lib/validation_schemas'
 import { createRequest } from '../../api_services/requests'
 import { CATEGORIES } from '../../lib/constants'
+import { extractErrorInfo } from '../../lib/error-handler'
+import { ErrorMessage } from '../../components/ui/ErrorMessage'
 
 interface RequestFormProps {
   onSuccess?: () => void
@@ -12,7 +14,7 @@ interface RequestFormProps {
 
 export function RequestForm({ onSuccess }: RequestFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<{ message: string; actionSuggestion?: string } | null>(null)
   const [success, setSuccess] = useState(false)
 
   const {
@@ -44,7 +46,8 @@ export function RequestForm({ onSuccess }: RequestFormProps) {
         onSuccess()
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error al crear la solicitud')
+      const errorInfo = extractErrorInfo(err)
+      setError(errorInfo)
     } finally {
       setIsSubmitting(false)
     }
@@ -107,12 +110,7 @@ export function RequestForm({ onSuccess }: RequestFormProps) {
         </div>
 
         {error && (
-          <div className="p-3 bg-red-50 border border-red-200 rounded-md">
-            <p className="text-sm text-red-600 flex items-center gap-2">
-              <AlertCircle className="w-4 h-4" />
-              {error}
-            </p>
-          </div>
+          <ErrorMessage message={error.message} actionSuggestion={error.actionSuggestion} />
         )}
 
         {success && (

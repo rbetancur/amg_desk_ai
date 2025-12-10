@@ -1,5 +1,6 @@
 import { Component, ReactNode } from 'react'
 import { AlertTriangle, RefreshCw } from 'lucide-react'
+import { handleApiError } from '../../lib/error-handler'
 
 interface Props {
   children: ReactNode
@@ -28,8 +29,50 @@ export class ErrorBoundary extends Component<Props, State> {
     window.location.reload()
   }
 
+  /**
+   * Sanitiza el mensaje de error para no mostrar detalles técnicos
+   */
+  private sanitizeErrorMessage(error: Error | null): string {
+    if (!error) {
+      return 'Ocurrió un error inesperado'
+    }
+
+    const message = error.message || 'Ocurrió un error inesperado'
+    
+    // Filtrar detalles técnicos
+    const technicalPatterns = [
+      /at\s+.*\(.*\)/g, // Stack traces
+      /Error:\s*/gi,
+      /TypeError|ReferenceError|SyntaxError/gi,
+      /http:\/\/|https:\/\//gi, // URLs
+      /localhost|127\.0\.0\.1/gi, // URLs locales
+      /node_modules/gi,
+      /\.tsx?:\d+:\d+/gi, // Referencias a archivos
+    ]
+
+    let sanitized = message
+    technicalPatterns.forEach((pattern) => {
+      sanitized = sanitized.replace(pattern, '')
+    })
+
+    // Si después de sanitizar queda vacío o muy corto, usar mensaje genérico
+    if (sanitized.trim().length < 10) {
+      return 'Ocurrió un error inesperado. Por favor, recarga la página.'
+    }
+
+    // Usar handleApiError para obtener mensaje amigable si es posible
+    try {
+      const friendlyMessage = handleApiError(error)
+      return friendlyMessage
+    } catch {
+      return sanitized.trim()
+    }
+  }
+
   render() {
     if (this.state.hasError) {
+      const friendlyMessage = this.sanitizeErrorMessage(this.state.error)
+      
       return (
         <div className="min-h-screen flex items-center justify-center bg-slate-50 px-4">
           <div className="max-w-md w-full bg-white rounded-lg shadow-sm border border-slate-200 p-8 text-center">
@@ -38,7 +81,7 @@ export class ErrorBoundary extends Component<Props, State> {
               Algo salió mal
             </h2>
             <p className="text-sm text-slate-600 mb-6">
-              {this.state.error?.message || 'Ocurrió un error inesperado'}
+              {friendlyMessage}
             </p>
             <div className="space-y-2">
               <button

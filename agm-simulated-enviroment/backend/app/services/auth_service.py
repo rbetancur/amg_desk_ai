@@ -4,6 +4,7 @@ from typing import Optional
 from jose import jwt, JWTError
 from email_validator import validate_email, EmailNotValidError
 from app.core.config import settings
+from app.core.exceptions import create_error_response
 
 security = HTTPBearer(auto_error=False)
 
@@ -30,13 +31,23 @@ async def get_api_key(
     if not api_key:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="API Key requerida. Proporcione 'Authorization: Bearer <key>' o 'X-API-Key: <key>'",
+            detail=create_error_response(
+                error_code="api_key_required",
+                message="API Key requerida para acceder a este recurso.",
+                detail="API Key no proporcionada",
+                action_suggestion="Proporciona la API Key en el header 'Authorization: Bearer <key>' o 'X-API-Key: <key>'.",
+            ),
         )
 
     if api_key != settings.API_SECRET_KEY:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=create_error_response(
+                error_code="invalid_api_key",
+                message="La API Key proporcionada no es válida.",
             detail="API Key inválida",
+                action_suggestion="Verifica que la API Key sea correcta y esté configurada adecuadamente.",
+            ),
         )
 
     return api_key
@@ -93,7 +104,12 @@ def verify_supabase_jwt(token: str) -> dict:
     if not jwt_secret:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="SUPABASE_JWT_SECRET o SUPABASE_ANON_KEY no configurada. Obtén JWT Secret desde Dashboard > Settings > API > JWT Secret",
+            detail=create_error_response(
+                error_code="jwt_secret_not_configured",
+                message="Error de configuración del servidor.",
+                detail="SUPABASE_JWT_SECRET o SUPABASE_ANON_KEY no configurada",
+                action_suggestion="Contacta al administrador del sistema.",
+            ),
         )
     
     try:
@@ -108,7 +124,12 @@ def verify_supabase_jwt(token: str) -> dict:
     except JWTError as e:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=f"Token inválido o expirado: {str(e)}",
+            detail=create_error_response(
+                error_code="invalid_token",
+                message="Tu sesión ha expirado o el token es inválido. Por favor, inicia sesión nuevamente.",
+                detail=f"Error de validación JWT: {str(e)}",
+                action_suggestion="Haz clic en 'Iniciar Sesión' para autenticarte nuevamente.",
+            ),
         )
 
 
@@ -128,7 +149,12 @@ async def get_current_user(
     if not credentials or not credentials.credentials:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Token JWT requerido. Proporcione 'Authorization: Bearer <token>'",
+            detail=create_error_response(
+                error_code="token_required",
+                message="Token JWT requerido para acceder a este recurso.",
+                detail="Token JWT no proporcionado",
+                action_suggestion="Proporciona el token JWT en el header 'Authorization: Bearer <token>'.",
+            ),
         )
     
     token = credentials.credentials
@@ -141,7 +167,12 @@ async def get_current_user(
     if not email:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=create_error_response(
+                error_code="email_not_found",
+                message="El email no se encontró en el token de autenticación.",
             detail="Email no encontrado en el token",
+                action_suggestion="Inicia sesión nuevamente para obtener un token válido.",
+            ),
         )
     
     # Validar formato de email
@@ -150,7 +181,12 @@ async def get_current_user(
     except EmailNotValidError:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=create_error_response(
+                error_code="invalid_email_format",
+                message="El formato del email en el token no es válido.",
             detail="Formato de email inválido",
+                action_suggestion="Contacta al administrador del sistema para resolver este problema.",
+            ),
         )
     
     # Extraer username del email
@@ -161,12 +197,22 @@ async def get_current_user(
         if "excede 25 caracteres" in error_msg:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=create_error_response(
+                    error_code="username_too_long",
+                    message="El nombre de usuario extraído del email excede el límite permitido de 25 caracteres.",
                 detail=error_msg,
+                    action_suggestion="Contacta al administrador del sistema para resolver este problema.",
+                ),
             )
         else:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=create_error_response(
+                    error_code="username_extraction_error",
+                    message="No se pudo extraer el nombre de usuario del email.",
                 detail=error_msg,
+                    action_suggestion="Verifica que el email tenga un formato válido.",
+                ),
             )
     
     # Retornar información del usuario
