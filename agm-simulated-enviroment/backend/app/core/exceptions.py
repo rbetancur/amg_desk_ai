@@ -2,6 +2,7 @@
 Excepciones personalizadas para el backend.
 """
 from datetime import datetime
+from typing import Optional
 
 
 class RequestNotFoundError(Exception):
@@ -27,7 +28,8 @@ class ValidationError(Exception):
 def create_error_response(
     error_code: str,
     message: str,
-    detail: str | None = None,
+    detail: Optional[str] = None,
+    action_suggestion: Optional[str] = None,
 ) -> dict:
     """
     Crea una respuesta de error estandarizada.
@@ -35,7 +37,8 @@ def create_error_response(
     Args:
         error_code: Código del error
         message: Mensaje legible para el usuario
-        detail: Detalle técnico opcional
+        detail: Detalle técnico opcional (solo para logs, no se muestra al usuario)
+        action_suggestion: Sugerencia de acción para el usuario (opcional)
         
     Returns:
         dict: Respuesta de error con estructura estándar
@@ -48,6 +51,9 @@ def create_error_response(
     
     if detail:
         response["detail"] = detail
+    
+    if action_suggestion:
+        response["action_suggestion"] = action_suggestion
     
     return response
 

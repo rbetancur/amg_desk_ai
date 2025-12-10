@@ -101,8 +101,9 @@ async def request_not_found_handler(request, exc):
         status_code=404,
         content=create_error_response(
             "request_not_found",
-            "La solicitud solicitada no existe o no tienes permisos para accederla",
-            str(exc),
+            "La solicitud solicitada no existe o no tienes permisos para accederla.",
+            detail=str(exc),
+            action_suggestion="Regresa a la página anterior o verifica que la URL sea correcta.",
         ),
     )
 
@@ -113,8 +114,9 @@ async def unauthorized_handler(request, exc):
         status_code=401,
         content=create_error_response(
             "unauthorized",
-            "No autorizado",
-            str(exc),
+            "Tu sesión ha expirado o no tienes autorización. Por favor, inicia sesión nuevamente.",
+            detail=str(exc),
+            action_suggestion="Haz clic en 'Iniciar Sesión' para autenticarte.",
         ),
     )
 
@@ -125,8 +127,9 @@ async def forbidden_handler(request, exc):
         status_code=403,
         content=create_error_response(
             "forbidden",
-            "Acceso denegado",
-            str(exc),
+            "No tienes permisos para realizar esta acción.",
+            detail=str(exc),
+            action_suggestion="Si necesitas acceso, contacta al administrador del sistema.",
         ),
     )
 
@@ -137,8 +140,9 @@ async def validation_handler(request, exc):
         status_code=422,
         content=create_error_response(
             "validation_error",
-            "Error de validación",
-            str(exc),
+            "Algunos campos tienen errores. Revisa los campos marcados y corrige la información antes de enviar.",
+            detail=str(exc),
+            action_suggestion="Verifica que todos los campos requeridos estén completos y tengan el formato correcto.",
         ),
     )
 

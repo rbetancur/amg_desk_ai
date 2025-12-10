@@ -1,6 +1,7 @@
 import { getBackendUrl } from '../lib/constants'
 import type { Request, RequestCreate, PaginatedResponse } from '../lib/types'
 import { supabase } from './supabase_client'
+import { extractErrorInfo } from '../lib/error-handler'
 
 /**
  * Obtiene los headers de autenticación con el token JWT
@@ -30,8 +31,9 @@ export async function createRequest(data: RequestCreate): Promise<Request> {
   })
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ message: 'Error al crear solicitud' }))
-    throw new Error(error.message || 'Error al crear solicitud')
+    const errorData = await response.json().catch(() => ({}))
+    const errorInfo = extractErrorInfo({ response: { data: errorData } })
+    throw new Error(errorInfo.message)
   }
 
   return response.json()
@@ -55,21 +57,21 @@ export async function getRequests(
     )
 
     if (!response.ok) {
-      let errorMessage = 'Error al obtener solicitudes'
+      let errorData = {}
       try {
-        const errorData = await response.json()
-        errorMessage = errorData.detail || errorData.message || errorMessage
+        errorData = await response.json()
       } catch {
-        // Si no se puede parsear el JSON, usar el mensaje por defecto
-        if (response.status === 401) {
-          errorMessage = 'No autorizado. Por favor, inicia sesión nuevamente.'
-        } else if (response.status === 500) {
-          errorMessage = 'Error del servidor. Por favor, intenta más tarde.'
-        } else if (response.status >= 400) {
-          errorMessage = `Error ${response.status}: ${response.statusText}`
+        // Si no se puede parsear el JSON, crear estructura básica
+        errorData = {
+          message: response.status === 401
+            ? 'Tu sesión ha expirado. Por favor, inicia sesión nuevamente.'
+            : response.status === 500
+            ? 'Ocurrió un error en el servidor. Intenta nuevamente en unos minutos. Si el problema persiste, contacta al soporte.'
+            : `Error ${response.status}: ${response.statusText}`,
         }
       }
-      throw new Error(errorMessage)
+      const errorInfo = extractErrorInfo({ response: { data: errorData } })
+      throw new Error(errorInfo.message)
     }
 
     try {
@@ -112,11 +114,9 @@ export async function getRequestById(id: number): Promise<Request> {
   })
 
   if (!response.ok) {
-    if (response.status === 404) {
-      throw new Error('Solicitud no encontrada')
-    }
-    const error = await response.json().catch(() => ({ message: 'Error al obtener solicitud' }))
-    throw new Error(error.message || 'Error al obtener solicitud')
+    const errorData = await response.json().catch(() => ({}))
+    const errorInfo = extractErrorInfo({ response: { data: errorData } })
+    throw new Error(errorInfo.message)
   }
 
   return response.json()
