@@ -22,6 +22,8 @@ export function extractErrorInfo(error: unknown): ErrorInfo {
   // Intentar extraer de respuesta del backend FastAPI
   if (error && typeof error === 'object' && 'response' in error) {
     const response = (error as any).response
+    const status = response?.status
+    
     if (response?.data) {
       const data = response.data
       // Verificar si tiene estructura estándar de error del backend
@@ -43,6 +45,14 @@ export function extractErrorInfo(error: unknown): ErrorInfo {
           message: data.detail.message,
           actionSuggestion: data.detail.action_suggestion || data.detail.actionSuggestion,
         }
+      }
+    }
+    
+    // Si es un error 401 y no hay mensaje específico, usar mensaje amigable
+    if (status === 401) {
+      return {
+        message: 'Tu sesión ha expirado. Por favor, inicia sesión nuevamente.',
+        actionSuggestion: 'Haz clic en "Ir a Iniciar Sesión" para autenticarte nuevamente.',
       }
     }
   }

@@ -5,12 +5,13 @@ import { useNavigate } from 'react-router-dom'
 import { LogIn, User, Lock, AlertCircle } from 'lucide-react'
 import { useSupabaseAuth } from '../../hooks/useSupabaseAuth'
 import { signInSchema, signUpSchema, type SignInInput, type SignUpInput } from '../../lib/validation_schemas'
-import { handleApiError } from '../../lib/error-handler'
+import { extractErrorInfo } from '../../lib/error-handler'
+import { ErrorMessage } from '../../components/ui/ErrorMessage'
 
 export function LoginForm() {
   const [isSignUp, setIsSignUp] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<{ message: string; actionSuggestion?: string } | null>(null)
   const { signIn, signUp } = useSupabaseAuth()
   const navigate = useNavigate()
 
@@ -38,12 +39,14 @@ export function LoginForm() {
       }
 
       if (response.error) {
-        setError(handleApiError(response.error))
+        const errorInfo = extractErrorInfo(response.error)
+        setError(errorInfo)
       } else {
         navigate('/dashboard')
       }
     } catch (err) {
-      setError(handleApiError(err))
+      const errorInfo = extractErrorInfo(err)
+      setError(errorInfo)
     } finally {
       setIsLoading(false)
     }
@@ -142,12 +145,7 @@ export function LoginForm() {
           )}
 
           {error && (
-            <div className="p-3 bg-red-50 border border-red-200 rounded-md">
-              <p className="text-sm text-red-600 flex items-center gap-2">
-                <AlertCircle className="w-4 h-4" />
-                {error}
-              </p>
-            </div>
+            <ErrorMessage message={error.message} actionSuggestion={error.actionSuggestion} />
           )}
 
           <button

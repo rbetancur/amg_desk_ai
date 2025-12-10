@@ -45,7 +45,7 @@ async def get_api_key(
             detail=create_error_response(
                 error_code="invalid_api_key",
                 message="La API Key proporcionada no es válida.",
-                detail="API Key inválida",
+            detail="API Key inválida",
                 action_suggestion="Verifica que la API Key sea correcta y esté configurada adecuadamente.",
             ),
         )
@@ -170,7 +170,7 @@ async def get_current_user(
             detail=create_error_response(
                 error_code="email_not_found",
                 message="El email no se encontró en el token de autenticación.",
-                detail="Email no encontrado en el token",
+            detail="Email no encontrado en el token",
                 action_suggestion="Inicia sesión nuevamente para obtener un token válido.",
             ),
         )
@@ -184,7 +184,7 @@ async def get_current_user(
             detail=create_error_response(
                 error_code="invalid_email_format",
                 message="El formato del email en el token no es válido.",
-                detail="Formato de email inválido",
+            detail="Formato de email inválido",
                 action_suggestion="Contacta al administrador del sistema para resolver este problema.",
             ),
         )
@@ -200,7 +200,7 @@ async def get_current_user(
                 detail=create_error_response(
                     error_code="username_too_long",
                     message="El nombre de usuario extraído del email excede el límite permitido de 25 caracteres.",
-                    detail=error_msg,
+                detail=error_msg,
                     action_suggestion="Contacta al administrador del sistema para resolver este problema.",
                 ),
             )
@@ -210,7 +210,7 @@ async def get_current_user(
                 detail=create_error_response(
                     error_code="username_extraction_error",
                     message="No se pudo extraer el nombre de usuario del email.",
-                    detail=error_msg,
+                detail=error_msg,
                     action_suggestion="Verifica que el email tenga un formato válido.",
                 ),
             )
