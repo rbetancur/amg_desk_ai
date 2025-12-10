@@ -223,10 +223,15 @@ class AIProcessor:
         user_message = f"Categoría: {codcategoria} ({category_name})\nDescripción: {description}"
         
         logger.debug(
-            "Prompt construido",
+            "📋 Prompt construido para Gemini",
             prompt_type=prompt_type,
+            codcategoria=codcategoria,
+            category_name=category_name,
             description_length=len(description),
-            codcategoria=codcategoria
+            description_included=bool(description and description.strip()),
+            user_message_preview=user_message[:400] + "..." if len(user_message) > 400 else user_message,
+            user_message_full_length=len(user_message),
+            description_in_message=description in user_message if description else False
         )
         
         return system_prompt, {"parts": [user_message]}
@@ -359,7 +364,29 @@ class AIProcessor:
             AIClassificationError: Si la clasificación falla definitivamente
         """
         start_time = datetime.utcnow()
+        
+        # VALIDACIÓN CRÍTICA: Verificar que la descripción no esté vacía
+        if not description or not description.strip():
+            logger.error(
+                "❌ Descripción vacía recibida en AIProcessor",
+                codcategoria=codcategoria,
+                ususolicita=ususolicita,
+                description_received=description
+            )
+            raise ValueError("La descripción de la solicitud no puede estar vacía")
+        
         sanitized_desc = self._sanitize_user_input(description)
+        
+        logger.info(
+            "🔍 Iniciando clasificación con Gemini",
+            codcategoria=codcategoria,
+            ususolicita=ususolicita,
+            description_original=description,
+            description_original_length=len(description),
+            description_sanitized=sanitized_desc,
+            description_sanitized_length=len(sanitized_desc),
+            description_preview=sanitized_desc[:200] + "..." if len(sanitized_desc) > 200 else sanitized_desc
+        )
         
         try:
             # Construir prompt optimizado
@@ -368,14 +395,38 @@ class AIProcessor:
             # Llamar a Gemini AI
             generation_config = self._get_generation_config()
             
-            # Construir mensaje completo
-            model = genai.GenerativeModel(self.settings.GEMINI_MODEL)
-            
-            # Usar generate_content con system_instruction y user message
-            response = await model.generate_content_async(
-                user_message["parts"][0],
-                generation_config=generation_config,
+            # Construir modelo con system_instruction
+            model = genai.GenerativeModel(
+                model_name=self.settings.GEMINI_MODEL,
                 system_instruction=system_prompt
+            )
+            
+            # LOGGING: Prompt completo que se envía a Gemini
+            user_message_text = user_message["parts"][0] if user_message.get("parts") else "N/A"
+            logger.info(
+                "🚀 Enviando request a Gemini API",
+                codcategoria=codcategoria,
+                ususolicita=ususolicita,
+                model=self.settings.GEMINI_MODEL,
+                system_prompt_preview=system_prompt[:500] + "..." if len(system_prompt) > 500 else system_prompt,
+                system_prompt_length=len(system_prompt),
+                user_message_full=user_message_text,
+                user_message_length=len(user_message_text),
+                generation_config=generation_config
+            )
+            
+            # Usar generate_content_async sin system_instruction (ya está en el modelo)
+            response = await model.generate_content_async(
+                user_message_text,
+                generation_config=generation_config
+            )
+            
+            # LOGGING: Después de recibir respuesta de Gemini
+            logger.debug(
+                "✅ Respuesta recibida de Gemini",
+                codcategoria=codcategoria,
+                response_has_text=hasattr(response, 'text'),
+                response_has_candidates=hasattr(response, 'candidates')
             )
             
             # Parsear y validar respuesta
@@ -406,11 +457,22 @@ class AIProcessor:
                 try:
                     # Reintentar una vez
                     system_prompt, user_message = self._build_classification_prompt(sanitized_desc, codcategoria)
-                    model = genai.GenerativeModel(self.settings.GEMINI_MODEL)
-                    response = await model.generate_content_async(
-                        user_message["parts"][0],
-                        generation_config=self._get_generation_config(),
+                    user_message_text = user_message["parts"][0] if user_message.get("parts") else ""
+                    
+                    # Construir modelo con system_instruction
+                    model = genai.GenerativeModel(
+                        model_name=self.settings.GEMINI_MODEL,
                         system_instruction=system_prompt
+                    )
+                    
+                    logger.info(
+                        "🔄 Reintentando request a Gemini API después de rate limit",
+                        user_message_full=user_message_text
+                    )
+                    
+                    response = await model.generate_content_async(
+                        user_message_text,
+                        generation_config=self._get_generation_config()
                     )
                     classification_data = self._parse_classification_response(response)
                     return ClassificationResult(**classification_data)

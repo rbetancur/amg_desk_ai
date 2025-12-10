@@ -355,7 +355,11 @@ class RealtimeListener:
             "📦 Datos extraídos del payload",
             request_data_keys=list(request_data.keys()) if request_data else [],
             request_data_sample=dict(list(request_data.items())[:5]) if request_data and len(request_data) > 0 else {},
-            request_data_empty=len(request_data) == 0
+            request_data_empty=len(request_data) == 0,
+            description_present="DESCRIPTION" in request_data if request_data else False,
+            description_value=request_data.get("DESCRIPTION") if request_data else None,
+            description_length=len(request_data.get("DESCRIPTION", "")) if request_data else 0,
+            description_preview=request_data.get("DESCRIPTION", "")[:200] if request_data and request_data.get("DESCRIPTION") else "VACÍA O NO PRESENTE"
         )
         
         codpeticiones = request_data.get("CODPETICIONES") if request_data else None
@@ -463,6 +467,31 @@ class RealtimeListener:
         codestado = request_data.get("CODESTADO")
         fesolicita_str = request_data.get("FESOLICITA")
         
+        # LOGGING: Descripción extraída de solicitud
+        logger.info(
+            "📝 Descripción extraída de solicitud",
+            codpeticiones=codpeticiones,
+            description_raw=description,
+            description_length=len(description) if description else 0,
+            description_empty=not description or not description.strip(),
+            all_keys_in_request_data=list(request_data.keys())
+        )
+        
+        # Validación temprana: Verificar que la descripción no esté vacía
+        if not description or not description.strip():
+            logger.error(
+                "❌ Descripción vacía detectada",
+                codpeticiones=codpeticiones,
+                codcategoria=codcategoria,
+                ususolicita=ususolicita,
+                request_data_sample=dict(list(request_data.items())[:10])
+            )
+            await self._update_request_with_rejection(
+                codpeticiones,
+                "La descripción de la solicitud no puede estar vacía. Por favor, proporciona detalles sobre tu solicitud."
+            )
+            return
+        
         # Parsear fecha de solicitud
         try:
             if fesolicita_str:
@@ -487,8 +516,17 @@ class RealtimeListener:
                 return
             
             # Sanitizar descripción
+            description_before_sanitize = description
             try:
                 description = self.request_validator.sanitize_description(description)
+                logger.info(
+                    "🧹 Descripción sanitizada",
+                    codpeticiones=codpeticiones,
+                    description_before=description_before_sanitize,
+                    description_after=description,
+                    length_before=len(description_before_sanitize) if description_before_sanitize else 0,
+                    length_after=len(description) if description else 0
+                )
             except ValidationError as e:
                 await self._update_request_with_rejection(
                     codpeticiones,
@@ -626,6 +664,25 @@ class RealtimeListener:
             30,
             ai_data
         )
+        
+        # LOGGING: Enviando solicitud a Gemini para clasificación
+        logger.info(
+            "🤖 Enviando solicitud a Gemini para clasificación",
+            codpeticiones=codpeticiones,
+            codcategoria=codcategoria,
+            ususolicita=ususolicita,
+            description_to_send=description,
+            description_length=len(description) if description else 0,
+            description_valid=bool(description and description.strip())
+        )
+        
+        # Validación antes de enviar
+        if not description or not description.strip():
+            logger.error(
+                "❌ Descripción vacía antes de enviar a Gemini",
+                codpeticiones=codpeticiones
+            )
+            raise ValueError("La descripción no puede estar vacía para clasificación")
         
         try:
             classification_result = await self.ai_processor.classify_request(
