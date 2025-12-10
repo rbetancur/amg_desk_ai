@@ -428,9 +428,243 @@ Si no se encuentra: `{"user_id": null, "user_name": "nombre_buscado", "email": n
    - Usar `datetime.utcnow().isoformat() + "Z"` para timestamp
 3. Usar try/except en endpoints para capturar errores de BD y convertirlos a excepciones personalizadas
 
+### 4.1.1. Mensajes de Error Amigables para Usuarios (CRÍTICO - Prioridad Alta)
+
+**Objetivo**: Garantizar que todos los mensajes de error sean claros, amigables, en español y sin detalles técnicos expuestos al usuario final. Esto es **requisito previo** para la implementación del Agente AI.
+
+**Justificación**: El Agente AI consumirá estos endpoints y necesitará mensajes claros para comunicar errores a los usuarios finales. Los mensajes técnicos o en inglés dificultarán la experiencia del usuario.
+
+**Tareas**:
+1. **Actualizar función `create_error_response()`** en `app/core/exceptions.py`:
+   - Agregar parámetro opcional `action_suggestion: Optional[str] = None`
+   - Estructura de respuesta actualizada:
+     ```python
+     def create_error_response(
+         error_code: str,
+         message: str,
+         detail: Optional[str] = None,
+         action_suggestion: Optional[str] = None,
+     ) -> dict:
+         response = {
+             "error": error_code,
+             "message": message,  # Mensaje amigable en español
+             "timestamp": datetime.utcnow().isoformat() + "Z",
+         }
+         
+         if action_suggestion:
+             response["action_suggestion"] = action_suggestion
+         
+         if detail:
+             response["detail"] = detail  # Solo para logs/debugging, NO mostrar al usuario
+         
+         return response
+     ```
+
+2. **Mapeo de Códigos HTTP a Mensajes Amigables** (implementar en exception handlers):
+   - **400 Bad Request**:
+     - `message`: "La solicitud no es válida. Por favor, verifica los datos enviados e intenta nuevamente."
+     - `action_suggestion`: "Revisa los campos del formulario y corrige cualquier error antes de enviar."
+   - **401 Unauthorized**:
+     - `message`: "Tu sesión ha expirado o no tienes autorización. Por favor, inicia sesión nuevamente."
+     - `action_suggestion`: "Haz clic en 'Iniciar Sesión' para autenticarte."
+   - **403 Forbidden**:
+     - `message`: "No tienes permisos para realizar esta acción."
+     - `action_suggestion`: "Si necesitas acceso, contacta al administrador del sistema."
+   - **404 Not Found**:
+     - `message`: "El recurso que buscas no existe o ya fue eliminado."
+     - `action_suggestion`: "Verifica que la URL sea correcta o regresa a la página anterior."
+   - **422 Unprocessable Entity**:
+     - `message`: "Los datos ingresados no son válidos. Por favor, revisa los campos marcados con error."
+     - `action_suggestion`: "Corrige los errores en el formulario y vuelve a intentar."
+   - **500 Internal Server Error**:
+     - `message`: "Ocurrió un error en el servidor. Nuestro equipo ha sido notificado."
+     - `action_suggestion`: "Intenta nuevamente en unos minutos. Si el problema persiste, contacta al soporte."
+   - **503 Service Unavailable**:
+     - `message`: "El servicio no está disponible temporalmente. Estamos trabajando para solucionarlo."
+     - `action_suggestion`: "Intenta nuevamente en unos minutos. Si el problema persiste, contacta al soporte."
+
+3. **Actualizar todos los `HTTPException` en routers**:
+   - Reemplazar mensajes técnicos por mensajes amigables en español
+   - Agregar `action_suggestion` cuando sea apropiado
+   - **NO exponer detalles técnicos** en `message` (usar `detail` solo para logs)
+   - Ejemplos de corrección:
+     ```python
+     # ❌ ANTES (técnico):
+     raise HTTPException(
+         status_code=400,
+         detail="Tipo de acción 'invalid_action' no válido. Acciones permitidas: generate_password, unlock_account"
+     )
+     
+     # ✅ DESPUÉS (amigable):
+     raise HTTPException(
+         status_code=400,
+         detail=create_error_response(
+             error_code="invalid_action_type",
+             message="El tipo de acción solicitada no es válido.",
+             action_suggestion="Verifica que la acción sea una de las permitidas: generar contraseña, desbloquear cuenta o bloquear cuenta.",
+             detail="Tipo de acción 'invalid_action' no válido"  # Solo para logs
+         )
+     )
+     ```
+
+4. **Actualizar exception handlers en `app/main.py`**:
+   - Usar mensajes amigables en lugar de genéricos
+   - Ejemplo de corrección:
+     ```python
+     # ❌ ANTES:
+     "message": "No autorizado"
+     
+     # ✅ DESPUÉS:
+     "message": "Tu sesión ha expirado o no tienes autorización. Por favor, inicia sesión nuevamente.",
+     "action_suggestion": "Haz clic en 'Iniciar Sesión' para autenticarte."
+     ```
+
+5. **Validar que NO se expongan detalles técnicos**:
+   - Stack traces → NO mostrar al usuario
+   - Códigos de error técnicos → NO mostrar al usuario
+   - Mensajes de excepción raw → NO mostrar al usuario
+   - URLs internas → NO mostrar al usuario
+   - Detalles de configuración → NO mostrar al usuario
+
+**Archivos a modificar**:
+- `agm-simulated-enviroment/backend/app/core/exceptions.py`
+- `agm-simulated-enviroment/backend/app/main.py`
+- `agm-simulated-enviroment/backend/app/routers/app_amerika.py`
+- `agm-simulated-enviroment/backend/app/routers/app_domain.py`
+- `agm-simulated-enviroment/backend/app/routers/service_desk.py`
+- `agm-simulated-enviroment/backend/app/services/auth_service.py`
+
+**Nota Importante**: Esta mejora debe implementarse **ANTES** de desarrollar el Agente AI, ya que el agente dependerá de estos mensajes amigables para comunicar errores a los usuarios finales.
+
 **Archivos a crear/modificar**:
 - `agm-simulated-enviroment/backend/app/core/exceptions.py` (nuevo)
 - `agm-simulated-enviroment/backend/app/main.py`
+
+### 4.1.2. Try-Catch Robusto en Todos los Endpoints (PENDIENTE - Prioridad Alta)
+
+**Objetivo**: Garantizar que todos los endpoints tengan try-catch completo para manejar errores de APIs externas, base de datos y casos edge.
+
+**Justificación**: El backend debe ser resiliente ante fallos de servicios externos, errores de base de datos y casos edge. Esto es crítico para el Agente AI que dependerá de estos endpoints.
+
+**Estado**: ⚠️ **PENDIENTE DE IMPLEMENTACIÓN**
+
+**Tareas**:
+1. **Implementar try-catch en endpoints de acción (`app_amerika.py`, `app_domain.py`)**:
+   - Envolver toda la lógica de ejecución en try-catch
+   - **Casos edge a manejar**:
+     - Errores de generación de contraseña (`secrets` puede fallar en casos extremos)
+     - Errores de validación de datos
+     - Errores de serialización JSON
+     - Timeouts en operaciones asíncronas
+   - **Ejemplo de implementación**:
+     ```python
+     @router.post("/execute-action")
+     async def execute_action(
+         request: AmerikaActionRequest,
+         api_key: str = Depends(get_api_key),
+     ) -> AmerikaActionResponse:
+         try:
+             # Validar action_type
+             valid_actions = ["generate_password", "unlock_account", "lock_account"]
+             if request.action_type not in valid_actions:
+                 raise HTTPException(
+                     status_code=400,
+                     detail=create_error_response(
+                         error_code="invalid_action_type",
+                         message="El tipo de acción solicitada no es válido.",
+                         action_suggestion="Verifica que la acción sea una de las permitidas.",
+                         detail=f"Tipo de acción '{request.action_type}' no válido"
+                     )
+                 )
+             
+             # Simular procesamiento
+             await asyncio.sleep(2)
+             
+             # Ejecutar acción según tipo
+             if request.action_type == "generate_password":
+                 try:
+                     password = generate_password_amerika()
+                     # ... resto de lógica
+                 except Exception as e:
+                     logger.error("Error al generar contraseña", error=str(e), exc_info=True)
+                     raise HTTPException(
+                         status_code=500,
+                         detail=create_error_response(
+                             error_code="password_generation_failed",
+                             message="No se pudo generar la contraseña. Por favor, intenta nuevamente.",
+                             action_suggestion="Tu solicitud será reintentada automáticamente.",
+                             detail=f"Error técnico: {str(e)}"
+                         )
+                     )
+             
+             # Retornar respuesta exitosa
+             return AmerikaActionResponse(...)
+             
+         except HTTPException:
+             # Re-lanzar HTTPException para que FastAPI las maneje
+             raise
+         except Exception as e:
+             # Capturar cualquier otro error inesperado
+             logger.error("Error inesperado en execute_action", error=str(e), exc_info=True)
+             raise HTTPException(
+                 status_code=500,
+                 detail=create_error_response(
+                     error_code="internal_server_error",
+                     message="Ocurrió un error inesperado al procesar tu solicitud.",
+                     action_suggestion="Intenta nuevamente en unos minutos. Si el problema persiste, contacta al soporte.",
+                     detail=f"Error técnico: {str(e)}"
+                 )
+             )
+     ```
+
+2. **Implementar try-catch en endpoints de Mesa de Servicio (`service_desk.py`)**:
+   - Ya existe try-catch básico en `list_requests()` (línea 118)
+   - **Mejorar manejo de errores**:
+     - Agregar try-catch en `POST /api/requests` (crear solicitud)
+     - Agregar try-catch en `GET /api/requests/{id}` (obtener solicitud)
+     - Agregar try-catch en `PATCH /api/requests/{id}` (actualizar solicitud)
+   - **Casos edge a manejar**:
+     - Errores de conexión a base de datos (ya manejado parcialmente)
+     - Errores de validación de datos
+     - Errores de transición de estado
+     - Errores de serialización JSON
+     - Timeouts en queries de base de datos
+   - **Usar estructura estándar de errores** con `create_error_response()` en todos los casos
+
+3. **Validar casos edge específicos**:
+   - **¿Qué pasa si la base de datos está caída?**
+     - Retornar 503 Service Unavailable con mensaje amigable
+     - Mensaje: "El servicio no está disponible temporalmente. Estamos trabajando para solucionarlo."
+     - Action suggestion: "Intenta nuevamente en unos minutos."
+   - **¿Qué pasa si Supabase Auth falla?**
+     - Retornar 503 Service Unavailable con mensaje amigable
+     - Mensaje: "El servicio de autenticación no está disponible temporalmente."
+     - Action suggestion: "Intenta iniciar sesión nuevamente en unos minutos."
+   - **¿Qué pasa si hay un timeout en una query?**
+     - Retornar 504 Gateway Timeout con mensaje amigable
+     - Mensaje: "La solicitud tardó demasiado en procesarse."
+     - Action suggestion: "Intenta nuevamente. Si el problema persiste, contacta al soporte."
+   - **¿Qué pasa si hay un error de serialización JSON?**
+     - Retornar 500 Internal Server Error con mensaje amigable
+     - Mensaje: "Ocurrió un error al procesar la respuesta."
+     - Action suggestion: "Intenta nuevamente. Si el problema persiste, contacta al soporte."
+
+4. **Implementar logging estructurado de errores**:
+   - Registrar todos los errores con contexto completo
+   - Incluir: endpoint, método HTTP, user_id (si aplica), error_type, stack trace
+   - **NO loggear información sensible** (contraseñas, tokens, etc.)
+
+**Archivos a modificar**:
+- `agm-simulated-enviroment/backend/app/routers/app_amerika.py`
+- `agm-simulated-enviroment/backend/app/routers/app_domain.py`
+- `agm-simulated-enviroment/backend/app/routers/service_desk.py`
+- `agm-simulated-enviroment/backend/app/services/auth_service.py`
+
+**Prerequisitos**:
+- ✅ FASE 4.1.1 (Mensajes de Error Amigables) debe estar implementada
+- ✅ Función `create_error_response()` debe estar disponible con soporte para `action_suggestion`
+
+**Nota**: Esta mejora es crítica para el Agente AI, ya que el agente necesita endpoints robustos que manejen errores de forma consistente y retornen mensajes amigables.
 
 ### 4.2. Validación de Datos
 

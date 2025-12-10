@@ -402,40 +402,108 @@ Desarrollar una interfaz de usuario mínima en React para registrar solicitudes 
 **Archivos a crear/modificar**:
 - `agm-simulated-enviroment/frontend/src/hooks/useFetchRequests.ts`
 
-### 4.3. Componente de Tabla de Solicitudes
+### 4.3. Componente de Tabla de Solicitudes con Feedback Progresivo
 
-**Objetivo**: Implementar tabla que muestra las solicitudes del usuario.
+**Objetivo**: Implementar tabla que muestra las solicitudes del usuario con indicadores de progreso en tiempo real.
 
 **Tareas**:
-1. Crear `src/features/requests/RequestTable.tsx`:
-   - Tabla que muestra columnas:
-     - CODESTADO (convertido a texto: "Pendiente", "En Trámite", "Solucionado")
-     - DESCRIPTION (descripción del problema)
-     - SOLUCION (respuesta al usuario, si está disponible)
-     - FESOLICITA (fecha de creación, formateada)
-     - FESOLUCION (fecha de solución, si aplica, formateada)
-     - AI_CLASSIFICATION_DATA (opcional, mostrar información de clasificación si está disponible)
-   - Usar `useFetchRequests()` para obtener datos
-   - Estados visuales:
-     - Badge/indicador de color según estado (Pendiente: amarillo, En Trámite: azul, Solucionado: verde)
-     - Mostrar "Sin solución aún" si `SOLUCION` es null
-     - Mostrar fecha formateada con `date-fns` (ej: "15 Ene 2024, 10:30")
-   - Paginación:
-     - Botones "Anterior" / "Siguiente"
-     - Mostrar "Mostrando X-Y de Z solicitudes"
-   - Responsive:
-     - En mobile: mostrar como cards en lugar de tabla
-     - En desktop: tabla completa
+1. **Mostrar Estado y Progreso de Solicitudes**:
+   - Para solicitudes con `CODESTADO = 2` (TRAMITE):
+     - Mostrar indicador de progreso basado en `AI_CLASSIFICATION_DATA.progress_percentage`
+     - Mostrar mensaje de estado actual desde `AI_CLASSIFICATION_DATA.current_step` o `SOLUCION`
+     - Mostrar badge animado "En Procesamiento" con spinner
+   - Para solicitudes con `CODESTADO = 3` (SOLUCIONADO):
+     - Mostrar badge "Completado" con checkmark
+     - Mostrar mensaje final desde `SOLUCION`
+   - Para solicitudes con `CODESTADO = 1` (PENDIENTE):
+     - Mostrar badge "Pendiente" con indicador estático
 
-2. Componente de detalle de solicitud (opcional):
-   - Modal o página de detalle que muestra:
-     - Todos los campos de la solicitud
-     - Historial de cambios (si está disponible)
-     - Información completa de `AI_CLASSIFICATION_DATA` formateada
+2. **Componente de Progreso Visual**:
+   - Crear componente `RequestProgressIndicator`:
+     - Barra de progreso visual (0-100%)
+     - Mensaje descriptivo del paso actual
+     - Icono según el estado (spinner para procesando, check para completado, etc.)
+     - Actualización automática vía Realtime
+   ```typescript
+   interface RequestProgressIndicatorProps {
+     request: Request
+   }
+   
+   function RequestProgressIndicator({ request }: RequestProgressIndicatorProps) {
+     const progress = request.ai_classification_data?.progress_percentage ?? 0
+     const currentStep = request.ai_classification_data?.current_step
+     const status = request.ai_classification_data?.processing_status
+     
+     if (request.codestado === 2) {
+       return (
+         <div className="space-y-2">
+           <div className="flex items-center gap-2">
+             <Loader2 className="w-4 h-4 animate-spin text-primary-600" />
+             <span className="text-sm text-slate-600">En Procesamiento</span>
+             <span className="text-sm font-medium text-primary-600">{progress}%</span>
+           </div>
+           {currentStep && (
+             <p className="text-xs text-slate-500 ml-6">{currentStep}</p>
+           )}
+           <div className="w-full bg-slate-200 rounded-full h-2">
+             <div 
+               className="bg-primary-600 h-2 rounded-full transition-all duration-500"
+               style={{ width: `${progress}%` }}
+             />
+           </div>
+         </div>
+       )
+     }
+     // ... otros estados
+   }
+   ```
+
+3. **Actualización en Tiempo Real**:
+   - El hook `useFetchRequests` ya maneja actualizaciones Realtime
+   - Cuando se recibe UPDATE con `AI_CLASSIFICATION_DATA` actualizado:
+     - Actualizar visualización de progreso automáticamente
+     - Mostrar mensaje de estado actualizado desde `current_step` o `SOLUCION`
+     - Animar transición de progreso suavemente (usar `transition-all duration-500`)
+     - Actualizar badge de estado si cambia `CODESTADO`
+
+4. **Tabla de Solicitudes Completa**:
+   - Crear `src/features/requests/RequestTable.tsx`:
+     - Tabla que muestra columnas:
+       - CODESTADO (convertido a texto: "Pendiente", "En Trámite", "Solucionado")
+       - DESCRIPTION (descripción del problema, truncada si es muy larga)
+       - **PROGRESO** (usar `RequestProgressIndicator` para solicitudes en trámite)
+       - SOLUCION (respuesta al usuario, si está disponible)
+       - FESOLICITA (fecha de creación, formateada)
+       - FESOLUCION (fecha de solución, si aplica, formateada)
+     - Usar `useFetchRequests()` para obtener datos
+     - Estados visuales:
+       - Badge/indicador de color según estado (Pendiente: amarillo, En Trámite: azul, Solucionado: verde)
+       - Mostrar "Sin solución aún" si `SOLUCION` es null y estado es Pendiente
+       - Mostrar fecha formateada con `date-fns` (ej: "15 Ene 2024, 10:30")
+     - Paginación:
+       - Botones "Anterior" / "Siguiente"
+       - Mostrar "Mostrando X-Y de Z solicitudes"
+     - Responsive:
+       - En mobile: mostrar como cards en lugar de tabla
+       - En desktop: tabla completa
+
+5. **Modal de Detalles con Progreso**:
+   - En `RequestDetailModal`, agregar sección de progreso:
+     - Si `CODESTADO = 2`: Mostrar barra de progreso detallada con `RequestProgressIndicator`
+     - Mostrar historial de pasos si está disponible en `AI_CLASSIFICATION_DATA`
+     - Mostrar tiempo transcurrido desde `FESOLICITA`
+     - Mostrar último update desde `AI_CLASSIFICATION_DATA.last_update`
+   - Mostrar información completa de `AI_CLASSIFICATION_DATA` formateada:
+     - Tipo de aplicación detectada (`app_type`)
+     - Nivel de confianza (`confidence`)
+     - Acciones detectadas (`detected_actions`)
+     - Estado de procesamiento (`processing_status`)
+     - Razón de clasificación (`reasoning`)
 
 **Archivos a crear/modificar**:
 - `agm-simulated-enviroment/frontend/src/features/requests/RequestTable.tsx`
-- `agm-simulated-enviroment/frontend/src/components/ui/RequestDetailModal.tsx` (opcional)
+- `agm-simulated-enviroment/frontend/src/features/requests/RequestProgressIndicator.tsx` (nuevo)
+- `agm-simulated-enviroment/frontend/src/features/requests/RequestDetailModal.tsx`
 
 ### 4.4. Página de Dashboard
 
@@ -485,6 +553,107 @@ Desarrollar una interfaz de usuario mínima en React para registrar solicitudes 
 **Archivos a crear/modificar**:
 - `agm-simulated-enviroment/frontend/src/lib/error-handler.ts`
 - `agm-simulated-enviroment/frontend/src/components/ui/ErrorBoundary.tsx`
+
+### 5.1.1. Mejoras en Mensajes de Error Amigables (CRÍTICO - Prioridad Alta)
+
+**Objetivo**: Mejorar el manejo de errores del frontend para mostrar mensajes más específicos, con acciones sugeridas y en español claro. Esto complementa las mejoras del backend y mejora la experiencia del usuario.
+
+**Justificación**: El backend ahora retorna mensajes amigables con `action_suggestion`. El frontend debe aprovechar estos mensajes y mejorarlos cuando sea necesario para una experiencia de usuario óptima.
+
+**Tareas**:
+1. **Mejorar función `handleApiError()` en `src/lib/error-handler.ts`**:
+   - Extraer `message` y `action_suggestion` de respuestas del backend cuando estén disponibles
+   - Si el backend retorna estructura estándar con `message` y `action_suggestion`, usarlos directamente
+   - Mejorar mensajes genéricos con acciones sugeridas más específicas:
+     ```typescript
+     // ✅ MEJORADO: Mensaje con acción sugerida
+     if (errorMessage.includes('404') || errorMessage.includes('not found')) {
+       return 'El recurso que buscas no existe o ya fue eliminado. Regresa a la página anterior o verifica la URL.'
+     }
+     
+     // ✅ MEJORADO: Mensaje más específico
+     if (errorMessage.includes('422') || errorMessage.includes('validation')) {
+       return 'Algunos campos tienen errores. Revisa los campos marcados en rojo y corrige la información antes de enviar.'
+     }
+     ```
+
+2. **Crear función `extractErrorInfo()`**:
+   - Extraer `message` y `action_suggestion` de respuestas del backend
+   - Manejar diferentes formatos de error (FastAPI estándar, Supabase, etc.)
+   - Retornar objeto con `message` y `action_suggestion` opcional
+   ```typescript
+   interface ErrorInfo {
+     message: string
+     actionSuggestion?: string
+   }
+   
+   function extractErrorInfo(error: unknown): ErrorInfo {
+     // Intentar extraer de respuesta del backend FastAPI
+     if (error && typeof error === 'object' && 'response' in error) {
+       const response = (error as any).response
+       if (response?.data?.message) {
+         return {
+           message: response.data.message,
+           actionSuggestion: response.data.action_suggestion
+         }
+       }
+     }
+     // Fallback a manejo tradicional
+     return {
+       message: handleApiError(error)
+     }
+   }
+   ```
+
+3. **Actualizar componentes para mostrar acciones sugeridas**:
+   - Modificar `RequestForm` para mostrar `action_suggestion` cuando esté disponible
+   - Modificar `RequestTable` para mostrar mensajes de error con acciones sugeridas
+   - Crear componente `ErrorMessage` reutilizable que muestre mensaje y acción sugerida:
+     ```typescript
+     interface ErrorMessageProps {
+       message: string
+       actionSuggestion?: string
+     }
+     
+     function ErrorMessage({ message, actionSuggestion }: ErrorMessageProps) {
+       return (
+         <div className="p-3 bg-red-50 border border-red-200 rounded-md">
+           <p className="text-sm text-red-600 flex items-center gap-2">
+             <AlertCircle className="w-4 h-4" />
+             {message}
+           </p>
+           {actionSuggestion && (
+             <p className="text-sm text-red-500 mt-2 ml-6">
+               💡 {actionSuggestion}
+             </p>
+           )}
+         </div>
+       )
+     }
+     ```
+
+4. **Mejorar mensajes específicos por código HTTP**:
+   - **400 Bad Request**: "La solicitud no es válida. Por favor, verifica los datos enviados e intenta nuevamente."
+   - **401 Unauthorized**: "Tu sesión ha expirado. Por favor, inicia sesión nuevamente." (con botón de acción)
+   - **403 Forbidden**: "No tienes permisos para realizar esta acción. Si necesitas acceso, contacta al administrador."
+   - **404 Not Found**: "El recurso que buscas no existe o ya fue eliminado. Regresa a la página anterior."
+   - **422 Unprocessable Entity**: "Algunos campos tienen errores. Revisa los campos marcados en rojo y corrige la información antes de enviar."
+   - **500 Internal Server Error**: "Ocurrió un error en el servidor. Intenta nuevamente en unos minutos. Si el problema persiste, contacta al soporte."
+   - **503 Service Unavailable**: "El servicio no está disponible temporalmente. Intenta nuevamente en unos minutos."
+
+5. **Validar que NO se muestren detalles técnicos**:
+   - NO mostrar stack traces
+   - NO mostrar códigos de error técnicos
+   - NO mostrar mensajes de excepción raw
+   - NO mostrar URLs internas o detalles de configuración
+
+**Archivos a modificar**:
+- `agm-simulated-enviroment/frontend/src/lib/error-handler.ts`
+- `agm-simulated-enviroment/frontend/src/features/requests/RequestForm.tsx`
+- `agm-simulated-enviroment/frontend/src/features/requests/RequestTable.tsx`
+- `agm-simulated-enviroment/frontend/src/components/ui/ErrorMessage.tsx` (nuevo)
+
+**Nota Importante**: Esta mejora debe implementarse **DESPUÉS** de las mejoras del backend (FASE 4.1.1) y **ANTES** de desarrollar el Agente AI, ya que el agente dependerá de que tanto el backend como el frontend manejen errores de forma amigable.
 
 ### 5.2. Validación de Formularios
 
