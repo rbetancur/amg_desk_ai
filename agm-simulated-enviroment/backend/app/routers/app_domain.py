@@ -48,35 +48,34 @@ async def execute_action(
     - unlock_account: Desbloquea cuenta de usuario
     """
     try:
-    # Validar action_type
-    valid_actions = ["find_user", "change_password", "unlock_account"]
-    if request.action_type not in valid_actions:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+        # Validar action_type
+        valid_actions = ["find_user", "change_password", "unlock_account"]
+        if request.action_type not in valid_actions:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
                 detail=create_error_response(
                     error_code="invalid_action_type",
                     message="El tipo de acción solicitada no es válido.",
                     detail=f"Tipo de acción '{request.action_type}' no válido",
                     action_suggestion="Verifica que la acción sea una de las permitidas: buscar usuario, cambiar contraseña o desbloquear cuenta.",
                 ),
-        )
+            )
 
-    # Validar user_name para find_user
-    if request.action_type == "find_user" and not request.user_name:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+        # Validar user_name para find_user
+        if request.action_type == "find_user" and not request.user_name:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
                 detail=create_error_response(
                     error_code="missing_user_name",
                     message="El nombre de usuario es requerido para buscar un usuario.",
-            detail="user_name es requerido para la acción find_user",
+                    detail="user_name es requerido para la acción find_user",
                     action_suggestion="Proporciona el nombre de usuario en el campo 'user_name'.",
                 ),
-        )
+            )
 
-    # Simular procesamiento (sleep 2 segundos)
-    await asyncio.sleep(2)
+        # Simular procesamiento (sleep 2 segundos)
+        await asyncio.sleep(2)
 
-    try:
         if request.action_type == "find_user":
             # Simular búsqueda de usuario (búsqueda parcial, case-insensitive)
             user_name = request.user_name.lower()
@@ -114,20 +113,20 @@ async def execute_action(
 
         elif request.action_type == "change_password":
             # Generar contraseña
-                try:
-            password = generate_password_dominio()
-                except Exception as e:
-                    logger.error("Error al generar contraseña", error=str(e), exc_info=True)
-                    raise HTTPException(
-                        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                        detail=create_error_response(
-                            error_code="password_generation_failed",
-                            message="No se pudo generar la contraseña. Por favor, intenta nuevamente.",
-                            detail=f"Error técnico: {str(e)}",
-                            action_suggestion="Tu solicitud será reintentada automáticamente.",
-                        ),
-                    )
-                
+            try:
+                password = generate_password_dominio()
+            except Exception as e:
+                logger.error("Error al generar contraseña", error=str(e), exc_info=True)
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=create_error_response(
+                        error_code="password_generation_failed",
+                        message="No se pudo generar la contraseña. Por favor, intenta nuevamente.",
+                        detail=f"Error técnico: {str(e)}",
+                        action_suggestion="Tu solicitud será reintentada automáticamente.",
+                    ),
+                )
+            
             timestamp = datetime.utcnow().isoformat() + "Z"
             
             result = DominioPasswordResult(
@@ -157,21 +156,6 @@ async def execute_action(
                 result=result.model_dump(),
                 message="Cuenta desbloqueada exitosamente",
                 generated_password=None,
-            )
-
-        except HTTPException:
-            # Re-lanzar HTTPException para que FastAPI las maneje
-            raise
-        except Exception as e:
-            logger.error("Error inesperado al ejecutar acción", error=str(e), exc_info=True)
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=create_error_response(
-                    error_code="internal_server_error",
-                    message="Ocurrió un error inesperado al procesar tu solicitud.",
-                    detail=f"Error técnico: {str(e)}",
-                    action_suggestion="Intenta nuevamente en unos minutos. Si el problema persiste, contacta al soporte.",
-                ),
             )
 
     except HTTPException:
