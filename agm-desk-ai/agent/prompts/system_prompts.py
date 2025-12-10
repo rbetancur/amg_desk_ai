@@ -48,7 +48,7 @@ Formato de respuesta requerido (JSON estricto):
   "app_type": "amerika" | "dominio",
   "confidence": 0.0-1.0,
   "detected_actions": ["change_password", "unlock_account"],
-  "reasoning": "Breve explicación (incluir si detectaste ambas aplicaciones o discrepancia con categoría)",
+  "reasoning": "Breve explicación (máximo 200 caracteres, incluir si detectaste ambas aplicaciones o discrepancia con categoría)",
   "extracted_params": {
     "user_name": "nombre_usuario"  // Solo para dominio si se menciona explícitamente
   },
@@ -165,7 +165,7 @@ Formato de respuesta requerido (JSON estricto):
   "app_type": "amerika" | "dominio",
   "confidence": 0.0-1.0,
   "detected_actions": ["change_password", "unlock_account"],
-  "reasoning": "Breve explicación (incluir si detectaste ambas aplicaciones o discrepancia con categoría)",
+  "reasoning": "Breve explicación (máximo 200 caracteres, incluir si detectaste ambas aplicaciones o discrepancia con categoría)",
   "extracted_params": {
     "user_name": "nombre_usuario"  // Solo para dominio si se menciona explícitamente
   },

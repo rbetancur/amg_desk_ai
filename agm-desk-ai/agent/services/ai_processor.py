@@ -288,6 +288,24 @@ class AIProcessor:
             if not isinstance(classification_data["detected_actions"], list) or not classification_data["detected_actions"]:
                 raise ValueError("detected_actions debe ser una lista no vacía")
             
+            # Truncar reasoning si excede 200 caracteres (límite del modelo Pydantic)
+            reasoning = classification_data.get("reasoning", "")
+            if len(reasoning) > 200:
+                # Truncar de forma inteligente: buscar el último espacio antes del límite
+                max_length = 197  # Dejar espacio para "..."
+                truncated = reasoning[:max_length]
+                # Buscar el último espacio para no cortar palabras
+                last_space = truncated.rfind(' ')
+                if last_space > 150:  # Solo usar el espacio si está razonablemente cerca del final
+                    truncated = truncated[:last_space]
+                classification_data["reasoning"] = truncated + "..."
+                logger.warning(
+                    "Reasoning truncado por exceder 200 caracteres",
+                    original_length=len(reasoning),
+                    truncated_length=len(classification_data["reasoning"]),
+                    original_preview=reasoning[:100]
+                )
+            
             # Agregar raw_classification para auditoría
             classification_data["raw_classification"] = response_text
             
